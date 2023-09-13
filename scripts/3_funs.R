@@ -6,14 +6,14 @@
 ## System: R Version 4.3.1, Sep 2023
 ## Last modified: Sep 2023
 ##########################################################
-loadGapData <- function(X, targetDates, dataType, dataPath){
+loadGapData <- function(dateN, targetDates, dataType, dataPath){
   if(any(!(dataType %in% c("rasters", "polygons", "metrics")))){
     stop("dataType must be one or a combination of 'rasters', 'polygons', or 
          'metrics'")
   }
   
-  dateStart <- targetDates[X-1]
-  dateEnd <- targetDates[X]
+  dateStart <- targetDates[dateN-1]
+  dateEnd <- targetDates[dateN]
   dateDesc <- paste0(dateStart, "_", dateEnd)
   
   if(any(grepl("rasters", dataType))){
@@ -40,8 +40,8 @@ loadGapData <- function(X, targetDates, dataType, dataPath){
   
   return(list(gapsRaster = r, gapsPolygons = v, gapsMetrics = dt))
 }
-cropPlotOrtho <- function(X, poly, vBuff){
-  r <- rast(X)
+cropPlotOrtho <- function(ort, poly, vBuff){
+  r <- rast(ort)
   vBuff <- project(vBuff, r)
   rCrop <- crop(r[[1:3]], vBuff)
   
@@ -49,10 +49,11 @@ cropPlotOrtho <- function(X, poly, vBuff){
   lines(poly, col="#66FFFF", lwd=1)
   return(rCrop)
 }
-checkTimeSeries <- function(id=NULL, x=NULL, y=NULL, flight, nImg, savePNG, 
-                            pngFolder, targetDates, dataPath, bufferN){
-  if((!is.null(id) & (!is.null(x) & !is.null(y))) |
-     (is.null(id) & (is.null(x)|is.null(y)))){
+checkTimeSeries <- function(id=NULL, xCoord=NULL, yCoord=NULL, flight, nImg, 
+                            showPlots, savePNG, pngFolder, targetDates, 
+                            dataPath, bufferN){
+  if((!is.null(id) & (!is.null(xCoord) & !is.null(yCoord))) |
+     (is.null(id) & (is.null(xCoord)|is.null(yCoord)))){
     stop("Must provide either id OR xy coords")
   }
   
@@ -72,7 +73,7 @@ checkTimeSeries <- function(id=NULL, x=NULL, y=NULL, flight, nImg, savePNG,
     
   }
   if(is.null(id)){
-    v <- vect(matrix(c(x,y), ncol=2), crs=crsProj)
+    v <- vect(matrix(c(xCoord, yCoord), ncol=2), crs=crsProj)
     b <- relate(ext(poly), v, "contains")
     
     if(!(b[,1])) stop("Provided xy point is not within extent of gap shpfile")
@@ -96,15 +97,21 @@ checkTimeSeries <- function(id=NULL, x=NULL, y=NULL, flight, nImg, savePNG,
   
   
   ## if you do NOT want to show axes, add `xaxt="n", yaxt="n"` to `par`
-  ### to add back in, need to run the code `par(xaxt="s", yaxt="s")`
-  par(mfrow=c(2,3), mar=rep(1,4), oma=rep(1,4))
-  orthoClips <- lapply(orthoPhotos, cropPlotOrtho, poly, vBuff)
-  names(orthoClips) <- paste0("x", datesOrtho)
+  ### to add back in after removing, need to run `par(xaxt="s", yaxt="s")`
+  
+  if(showPlots){
+    par(mfrow=c(2,3), mar=rep(1,4), oma=rep(1,4))
+    orthoClips <- lapply(orthoPhotos, cropPlotOrtho, poly, vBuff)
+    names(orthoClips) <- paste0("x", datesOrtho) #necessary only if returned
+  }
   
   if(savePNG){
+    pngFolder <- paste0(pngFolder, "/", flight)
+    if(!dir.exists(pngFolder)) dir.create(pngFolder)
+    
     pngFile <- ifelse(!is.null(id), 
                       paste0(pngFolder, "/gap", id, "_", flight, ".png"),
-                      paste0(pngFolder, "/gap_", "x", x, "_y", y, "_", 
+                      paste0(pngFolder, "/gap_", "x", xCoord, "_y", yCoord, "_", 
                              flight, ".png"))
     png(pngFile, width=16, height=12, units="cm", res=350)
     
