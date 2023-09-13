@@ -59,7 +59,7 @@ if(script == "defineGaps"){
 if(script == "orthoTS"){
   dataPath <- "Data_HeightRasters/canopyGaps/"
   orthoPath <- "DroneOrthomosaics"
-  pngFolder <- paste0(orthoPath, "/gapTimeseries")
+  pngFolder <- "gapTimeseries"
   dIndex <- which(grepl(flight, flightDates))
   targetDates <- flightDates[(dIndex-1):dIndex]
   bufferN <- 10 # length of buffer (m) for individual points (i.e. no gap ID)
