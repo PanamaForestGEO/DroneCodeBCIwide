@@ -36,6 +36,6 @@ The code as written is dependent on the following directory structure:
     - `LidarDEM_BCI.tif`
 - `DroneOrthomosaics`
   - one file for each orthomosaic, labeled as `YYYY-MM-DD_orthoWholeBCI.tif`
-  - `gapTimeseries` = png files of ortho time series for a specific (gap) location
+- `gapTimeseries` = png files of ortho time series for a specific (gap) location
 - `PointClouds/Processed/DronePhotogrammetry`= folders of aligned point clouds (844 `.laz` files)for each flight date. Naming convention for each folder is `tilesAlignedBCI_YYYY-MM-DD`.
 - `scripts`
