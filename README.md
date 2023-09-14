@@ -5,7 +5,7 @@ Code for processing drone imagery for all of Barro Colorado Island
 Please see the document `postAlignWorkflow.md` for workflow and overall file structure used.
 
 ## Contributors to the code
-KC Cushman wrote the original set of code which were used for analyses in Cushman et al. (2022).  This code was subsequently modified by Mia Mitchell, Vicente Vasquez and Ian McGregor.  
+KC Cushman wrote the original set of code which was used for analyses in Cushman et al. (2022).  This code was subsequently modified by Mia Mitchell, Vicente Vasquez and Ian McGregor.  
 
 ## References
 
