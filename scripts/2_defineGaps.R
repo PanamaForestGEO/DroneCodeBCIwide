@@ -33,17 +33,31 @@ source("scripts/0_args.R")
 ### - metrics table with mean canopy height, perimeter, area, polygon centroid
 
 ## ------------------------------------------------- ##
-# 1. Create canopy height models for each flight DSM
-## ~10 sec per DSM 
-chmFlights <- lapply(targetDates, createCHM, pathData, pathAge, bufferPath, 
-                   demBCI, maskPath, crsProj)
-names(chmFlights) <- paste0("x", targetDates)
+# 1. Create canopy height models and calculate height change btwn flights
+changeRasters <- processCanopyHeights(targetDates, pathData, pathAge, 
+                                      bufferPath, demBCI, maskPath, crsProj, 
+                                      saveHeightChange=TRUE,
+                                      saveHeightPath, validated=FALSE)
 
-# 2. Calculate canopy height change and identify gaps
+# 2. Inspect height change rasters
+## may need to play around with colors a bit
+for(i in 1:length(changeRasters)){
+  if(i==1) pal <- colorRampPalette(c("black", "black", "black", "lightgrey", 
+                                     "white"))
+  if(i %in% c(2,3)) pal <- colorRampPalette(c("black", "grey", "white"))
+  plot(changeRasters[[i]], col=pal(500))
+}
+
+## example case where we remove a section of the raster due to anomalies
+vecRemove <- draw("polygon", col="black")
+crs(vecRemove) <- crs(changeRasters[[1]])
+writeVector(vecRemove, "Data_HeightRasters/anomalyRemove.shp")
+
+# 2. Identify gaps
 ## **NB**: Identifying the gaps takes ~20-30 mins per raster
-gapRasters <- lapply(2:length(targetDates), identifyGaps, chmFlights, shortMask, 
-                    shortThresh, saveHeightChange=TRUE, saveHeightPath,
-                    returnGaps=TRUE, saveGaps=TRUE, saveGapsPath)
+gapRasters <- lapply(2:length(targetDates), identifyGaps, targetDates, 
+                     changeRasters, saveHeightPath, shortThresh, 
+                     returnGaps=TRUE, saveGaps=TRUE, saveGapsPath, vecRemove)
 
 ## ------------------------------------------------- ##
 # 3. Create gap polygons and calculate metrics

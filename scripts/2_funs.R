@@ -90,31 +90,10 @@ createCHM <- function(X, pathData, pathAge, bufferPath, demBCI, maskPath,
   
   return(chm)
 }
-getForestGaps <- function(chm_layer, threshold = 10, size = c(1, 10^4), 
-                          directions = 8){
-  chm_layer[chm_layer > threshold] <- NA
-  chm_layer[chm_layer <= threshold] <- 1
-  gaps <- terra::patches(chm_layer, directions, allowGaps = F)
-  rcl <- terra::freq(gaps)
-  rcl[, 3] <- rcl[, 3] * terra::res(chm_layer)[1]^2
-  z <- terra::classify(gaps, rcl = rcl, right = NA)
-  z[is.na(gaps)] <- NA
-  gaps[z > size[2]] <- NA
-  gaps[z < size[1]] <- NA
-  gaps <- terra::patches(gaps, directions, allowGaps = F)
-  names(gaps) <- "gaps"
-  return(gaps)
-}
-identifyGaps <- function(X, chmFlights, shortMask, shortThresh, 
-                         saveHeightChange, saveHeightPath, returnGaps,
-                         saveGaps, saveGapsPath){
+heightChange <- function(X, chmFlights, saveHeightChange, saveHeightPath){
   dateStart <- gsub("x", "", names(chmFlights)[X-1])
   dateEnd <- gsub("x", "", names(chmFlights)[X])
-  print(paste0("Processing change between ", dateStart, " and ", dateEnd, 
-               " at ", format(Sys.time())))
   
-  ## create canopy height change rasters.
-  print(paste0("Making delta height rasters at ", format(Sys.time())))
   change <- chmFlights[[X]] - chmFlights[[(X-1)]]
   
   if(saveHeightChange){
@@ -123,24 +102,102 @@ identifyGaps <- function(X, chmFlights, shortMask, shortThresh,
     writeRaster(change, outPath, overwrite=TRUE)
   }
   
-  ## mask out any pixels that were not initially >= a threshold
-  if(shortMask){
-    rcl <- matrix(c(-9999, shortThresh, NA,
-                    shortThresh, 9999, 1),
-                  ncol=3, byrow=TRUE)
-    pixRetain <- classify(chmYears[[X]], rcl, right=TRUE)
-    deltaCHM <- mask(deltaCHM, pixRetain)
+  return(change)
+}
+processCanopyHeights <- function(targetDates, pathData, pathAge, bufferPath,
+                                 demBCI, maskPath, crsProj, saveHeightChange,
+                                 saveHeightPath, validated=FALSE){
+  # 1. Create canopy height models for each flight DSM
+  ## ~10 sec per DSM 
+  chmFlights <- lapply(targetDates, createCHM, pathData, pathAge, bufferPath, 
+                       demBCI, maskPath, crsProj)
+  names(chmFlights) <- paste0("x", targetDates)
+  
+  # 2. Create change rasters between successive canopy height models
+  changeFlights <- lapply(2:length(targetDates), heightChange, chmFlights, 
+                          saveHeightChange, saveHeightPath)
+  
+  if(!validated){
+    warning("
+    STOP! Please evaluate each height change raster and run through this 
+    checklist to ensure there are no data issues BEFORE identifying gaps:
+    
+    Problems:
+    1. Can you see straight, square lines? These are tiling issues.
+    2. Do you see long straight lines with a lot of change on one side? 
+    This is probably due to cloud or flight artefacts.
+    
+    Solutions:
+    - The fastest solution is to create a mask and remove the problematic areas
+    if possible (e.g. one bad tile, one thing long tiling offset). 
+    - However, the best solution is to fix the original point cloud processing.
+    
+    Next steps:
+    - Once you have ensured the height change rasters are fine or you have
+    fixed the issues, re-run this function with `validated=TRUE`.")
   }
+  return(changeFlights)
+}
+getForestGaps <- function(chm_layer, threshold = 10, size = c(1, 10^4), 
+                          directions = 8){
+  ## this function comes from ForestGapR package. The annotations below are
+  ## added and not part of the original code.
+  
+  # Step 1: Filter CHM to only retain cells that have experienced no greater
+  ## than a `threshold` depth (height) change
+  chm_layer[chm_layer > threshold] <- NA
+  chm_layer[chm_layer <= threshold] <- 1
+  
+  # Step 2: Create patches by grouping cells that are surrounded by NA
+  gaps <- terra::patches(chm_layer, directions, allowGaps = F)
+  
+  # Step 3: Combine the cells with the same patch number into a single block
+  ## indicating the area of the patch. We first get the frequency of each patch
+  ## number, then multiply that frequency by the area of a single cell. Finally,
+  ## we assign that value to those cells.
+  rcl <- terra::freq(gaps)[, 2:3]
+  rcl[, 2] <- rcl[, 2] * terra::res(chm_layer)[1]^2
+  z <- terra::classify(gaps, rcl = rcl, right = NA)
+  
+  # Step 4: We now use the gap area raster to cross-reference with the first
+  ## gap raster in 2 sub-steps:
+  ## - mask so that both have the same NA
+  ## - filter the original gap raster to exclude gaps whose areas are not
+  ### within the desired range
+  z[is.na(gaps)] <- NA
+  gaps[z > size[2]] <- NA
+  gaps[z < size[1]] <- NA
+  
+  # Step 5: Now create the patches again, but this time acting on only the
+  ## masked and filtered pixels by gap area
+  gaps <- terra::patches(gaps, directions, allowGaps = F)
+  names(gaps) <- "gaps"
+  return(gaps)
+}
+identifyGaps <- function(X, targetDates, changeRasters, saveHeightPath, 
+                         shortThresh, returnGaps, saveGaps, saveGapsPath, 
+                         vecRemove=NULL){
+  dateStart <- gsub("x", "", targetDates[X-1])
+  dateEnd <- gsub("x", "", targetDates[X])
+  print(paste0("Processing change between ", dateStart, " and ", dateEnd, 
+               " at ", format(Sys.time())))
+  
+  ## load canopy height change rasters
+  outPath <- gsub("D1", dateStart, saveHeightPath)
+  outPath <- gsub("D2", dateEnd, outPath)
+  change <- rast(outPath)
+  
+  if(!is.null(vecRemove)) change <- mask(change, vecRemove, inverse=TRUE)
   
   # Define gap height threshold, min gap size, and max gap size
   gapSzMin <- 25
   gapSzMax <- 10^6
-  gapHtThresh <- -5
   directions <- 4
   
-  # Identify gaps (takes a bit of time)
+  # Identify gaps (takes a bit of time) that were at least as big of a 
+  ## change as shortThresh
   print(paste0("Identifying forest gaps at ", format(Sys.time())))
-  gaps <- getForestGaps(change, threshold = gapHtThresh, 
+  gaps <- getForestGaps(change, threshold = shortThresh, 
                         size=c(gapSzMin,gapSzMax), directions)
   
   print(paste0("Finished processing chqnge between ", dateStart, " and ", 
@@ -149,9 +206,6 @@ identifyGaps <- function(X, chmFlights, shortMask, shortThresh,
   if(saveGaps){
     outPath <- gsub("D1", dateStart, saveGapsPath)
     outPath <- gsub("D2", dateEnd, outPath)
-    if(shortMask){
-      outPath <- gsub("gaps", "gapsShortMask", outPath)
-    }
     
     writeRaster(gaps, outPath, overwrite=TRUE)
   }
