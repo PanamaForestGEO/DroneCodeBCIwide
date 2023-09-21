@@ -51,8 +51,7 @@ if(script == "defineGaps"){
   maskPath <-"Data_QAQC/"
   targetDates <- flightDates[flightDates > as.Date("2021-01-01")]
   
-  shortMask <- FALSE
-  shortThresh <- ""
+  shortThresh <- -5 #-5 means a drop in height of 5 m
   saveGapsPath <- paste0(pathHeight, "canopyGaps/rasters/gapsD1_D2.tif")
   saveHeightPath <- paste0(pathHeight, "heightChange/changeD1_D2.tif")
 }
