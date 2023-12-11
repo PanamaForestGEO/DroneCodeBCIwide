@@ -1,5 +1,5 @@
 # Full workflow
-Below is the complete list of steps for processing drone data as part of a spectral and structural analysis. Currently (Nov 2023) the workflow below is run using a mix of coding languages and software applications. Eventually, our goal is to convert this to a single coding language.
+Below is the complete list of steps for processing drone data as part of a spectral and structural analysis. Currently (Dec 2023) the workflow below is run using a mix of coding languages and software applications. Eventually, our goal is to convert this to a single coding language.
 
 |Step # | Task | Protocol or script name | Software 
 |---|---|---|---|
