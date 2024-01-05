@@ -10,6 +10,7 @@
 library(terra)
 library(lidR)
 library(parallel)
+library(sf)
 source("scripts/L1_funs.R")
 
 ## path definitions
@@ -43,6 +44,13 @@ write.csv(gridInfo, pathGrid)
 ##-------------------------------------------------------##
 ## 2. Re-tile the point cloud using the new grid with a certain overlap amount
 ##    and save the new laz files
+
+# trim point cloud using border of soils polygon
+bciBorder <- aggregate(vect(pathSoils),by=NULL, dissolve=TRUE)
+bciBorder <- fillHoles(bciBorder,inverse=FALSE)
+bciBorder <- project(bciBorder, crsProj)
+bciBorder <- st_as_sf(bciBorder)
+
 gridInfo <- read.csv(pathGrid)
 catObj <- catalog(pathPointCloud)
 dirPath <- gsub("1_raw", "2_standardized", pathPointCloud)
@@ -53,7 +61,7 @@ clusterEvalQ(cl, library(terra))
 clusterEvalQ(cl, library(lidR))
 clusterExport(cl, c("gridInfo", "catObj", "dirPath"))
 parSapply(cl, 1:nrow(gridInfo), standardizePC, gridInfo, catObj, overlap=30, 
-          dirPath, type="align")
+           ROI=bciBorder, dirPath, type="align")
 stopCluster(cl)
 
 ##-------------------------------------------------------##
@@ -70,7 +78,7 @@ file.edit("cloudCompareBatch.sh")
 system("sh cloudCompareBatch.sh")
 
 ##-------------------------------------------------------##
-## 4. Re-tile the point cloud using the new grid with no overlap amount
+## 4a. Re-tile the point cloud using the new grid with no overlap amount
 ##    and save the new laz files
 catObj <- catalog(gsub("1_raw", "3_cloudCompare", pathPointCloud))
 dirPath <- gsub("1_raw/", "4_aligned/tilesAlignedBCI_", pathPointCloud)
@@ -83,6 +91,23 @@ clusterExport(cl, c("gridInfo", "catObj", "dirPath"))
 parSapply(cl, 1:nrow(gridInfo), standardizePC, gridInfo, catObj, overlap=0, 
           dirPath, type="")
 stopCluster(cl)
+
+## 4b. Delete .bin files and move transformation matrices to a separate 
+##      folder from the Cloud Compare default (original target folder)
+
+binFiles <- list.files(gsub("1_raw", "2_standardized", pathPointCloud),
+                       full.names = T, pattern = ".bin")
+file.remove(binFiles)
+
+matPath <- gsub("1_raw", "7_transformationMatrices", pathPointCloud)
+if(!dir.exists(matPath)) dir.create(matPath)
+
+matFiles <- list.files(gsub("1_raw", "2_standardized", pathPointCloud),
+                       full.names = T, pattern = ".txt")
+for(i in 1:length(matFiles)){
+  file.rename(from = matFiles[i],
+              to = gsub("2_standardized","7_transformationMatrices",matFiles[i]))
+}
 
 ##-------------------------------------------------------##
 ## 5. Create a DSM from the aligned point cloud
