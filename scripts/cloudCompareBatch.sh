@@ -48,7 +48,7 @@ for tileN in {1..844}; do
     path2="${refPathCC}$tileN.laz"
     path4="${refPathCC}$tileN.las"
 
-    open -W -g -a CloudCompare.app --args -SILENT -O -GLOBAL_SHIFT -620000.00 -1000000.00 0 "$path1" -O -GLOBAL_SHIFT -620000.00 -1000000.00 0 "$path2" -ICP -ITER 800 -OVERLAP 80 -C_EXPORT_FMT LAS -SAVE_CLOUDS FILE "$path3 $path4" -CLEAR
+    open -W -g -a CloudCompare.app --args -SILENT -O -GLOBAL_SHIFT -620000.00 -1010000.00 0 "$path1" -O -GLOBAL_SHIFT -620000.00 -1010000.00 0 "$path2" -ICP -OVERLAP 98 -RANDOM_SAMPLING_LIMIT 100000 -C_EXPORT_FMT LAS -SAVE_CLOUDS FILE "$path3 $path4" -CLEAR
 
     ## either hold the code for 15 seconds or until "Return" is pressed,
     ## whichever is first. To troubleshoot and only advance when "Return"
