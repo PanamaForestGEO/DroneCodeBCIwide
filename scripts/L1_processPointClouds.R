@@ -61,7 +61,7 @@ clusterEvalQ(cl, library(terra))
 clusterEvalQ(cl, library(lidR))
 clusterExport(cl, c("gridInfo", "catObj", "dirPath"))
 parSapply(cl, 1:nrow(gridInfo), standardizePC, gridInfo, catObj, overlap=30, 
-           ROI=bciBorder, dirPath, type="align")
+           dirPath, type="align", ROI=bciBorder)
 stopCluster(cl)
 
 ##-------------------------------------------------------##
