@@ -31,7 +31,7 @@ createGrid <- function(tileSz){
   gridInfo$Use <- NA
   return(gridInfo)
 }
-standardizePC <- function(gridN, gridInfo, catObj, overlap, dirPath, type, ROI){
+standardizePC <- function(gridN, gridInfo, catObj, overlap, dirPath, type, ROI = NULL){
   print(paste0("Processing tile ", gridN))
   data <- clip_rectangle(catObj, 
                          xleft = gridInfo$xmin[gridN] - overlap,
