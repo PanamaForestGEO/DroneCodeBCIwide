@@ -31,7 +31,7 @@ createGrid <- function(tileSz){
   gridInfo$Use <- NA
   return(gridInfo)
 }
-standardizePC <- function(gridN, gridInfo, catObj, overlap, dirPath, type){
+standardizePC <- function(gridN, gridInfo, catObj, overlap, dirPath, type, ROI = NULL){
   print(paste0("Processing tile ", gridN))
   data <- clip_rectangle(catObj, 
                          xleft = gridInfo$xmin[gridN] - overlap,
@@ -41,6 +41,10 @@ standardizePC <- function(gridN, gridInfo, catObj, overlap, dirPath, type){
 
   if(type=="align"){
     data <- decimate_points(data, algorithm=highest(res=0.5))
+  }
+  
+  if(!is.null(ROI)){
+    data <- clip_roi(data,ROI)
   }
   
   if(length(data@data$X)>0){
