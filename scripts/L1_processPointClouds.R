@@ -100,7 +100,7 @@ binFiles <- list.files(gsub("1_raw", "2_standardized", pathPointCloud),
 file.remove(binFiles)
 
 matPath <- gsub("1_raw", "7_transformationMatrices", pathPointCloud)
-if(!dir.exists(matPath)) dir.create(matPath)
+if(!dir.exists(matPath)) dir.create(matPath, recursive=TRUE)
 
 matFiles <- list.files(gsub("1_raw", "2_standardized", pathPointCloud),
                        full.names = T, pattern = ".txt")
