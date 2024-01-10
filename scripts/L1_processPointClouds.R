@@ -80,6 +80,7 @@ system("sh cloudCompareBatch.sh")
 ##-------------------------------------------------------##
 ## 4a. Re-tile the point cloud using the new grid with no overlap amount
 ##    and save the new laz files
+gridInfo <- read.csv(pathGrid)
 catObj <- catalog(gsub("1_raw", "3_cloudCompare", pathPointCloud))
 dirPath <- gsub("1_raw/", "4_aligned/tilesAlignedBCI_", pathPointCloud)
 if(!dir.exists(dirPath)) dir.create(dirPath)
