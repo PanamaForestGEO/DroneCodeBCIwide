@@ -14,7 +14,7 @@ targetFilePrefix="/cloud_"
 targetPath="/Users/ianmcgregor/Documents/labData/droneData/pointClouds/"
 
 ## Build the full file paths
-alignPath="${filePath}4_aligned/tilesAlignedBCI_"
+alignPath="${filePath}3_cloudCompare/${refDate}"
 refPathCC="${alignPath}${refDate}${refFilePrefix}"
 targetPathCC="${filePath}2_standardized/${targetDate}${targetFilePrefix}"
 targetOutPathCC="${filePath}3_cloudCompare/${targetDate}"
