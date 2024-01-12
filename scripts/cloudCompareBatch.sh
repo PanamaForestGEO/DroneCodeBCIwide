@@ -6,7 +6,7 @@ filePath="/Users/ianmcgregor/Documents/labData/droneData/pointClouds/"
 
 # Reference point cloud
 refDate="2023-06-19"
-refFilePrefix="/BCI23fat_"
+refFilePrefix="/cloud_"
 
 # Target point cloud
 targetDate="2023-10-12"
@@ -14,7 +14,7 @@ targetFilePrefix="/cloud_"
 targetPath="/Users/ianmcgregor/Documents/labData/droneData/pointClouds/"
 
 ## Build the full file paths
-alignPath="${filePath}3_cloudCompare/${refDate}"
+alignPath="${filePath}3_cloudCompare/"
 refPathCC="${alignPath}${refDate}${refFilePrefix}"
 targetPathCC="${filePath}2_standardized/${targetDate}${targetFilePrefix}"
 targetOutPathCC="${filePath}3_cloudCompare/${targetDate}"
