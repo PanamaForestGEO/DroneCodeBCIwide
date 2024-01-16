@@ -44,7 +44,7 @@ if(script=="standardize"){
 }
 if(script=="changeGaps"){
   # targetDates <- flightDates[flightDates > as.Date("2021-01-01")]
-  targetDates <- c("2023-06-19", "2023-10-31")
+  targetDates <- c("2023-06-19", "2023-10-12")
   savePath <- "droneData/processedChange/"
   vecRemovePath <- "droneData/droneOrthomosaics/shapefiles/anomalyPolygons/"
   
