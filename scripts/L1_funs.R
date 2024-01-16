@@ -79,9 +79,9 @@ makeDSMs <- function(X, pointCloudPath, pathSave, crsProj, pathBuffer, plotDSM,
 
   ## mask DSM to shapefile boundary
   v <- project(vect(pathBuffer), crsProj)
-  outFile <- crop(outFile, v)
+  outFile <- mask(outFile, v)
   if(saveDSM){
-    writeRaster(r, filename=gsub("5_dsm", "6_dsmMasked", pathSave),
+    writeRaster(outFile, filename=gsub("5_dsm", "6_dsmMasked", pathSave),
                 overwrite=TRUE)
   }
 
