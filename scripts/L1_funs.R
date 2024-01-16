@@ -31,7 +31,7 @@ createGrid <- function(tileSz){
   gridInfo$Use <- NA
   return(gridInfo)
 }
-standardizePC <- function(gridN, gridInfo, catObj, overlap, dirPath, type, ROI = NULL){
+standardizePC <- function(gridN, gridInfo, catObj, overlap, dirPath, type, ROI=NULL){
   print(paste0("Processing tile ", gridN))
   data <- clip_rectangle(catObj, 
                          xleft = gridInfo$xmin[gridN] - overlap,
@@ -46,7 +46,7 @@ standardizePC <- function(gridN, gridInfo, catObj, overlap, dirPath, type, ROI =
   if(!is.null(ROI)){
     data <- clip_roi(data,ROI)
   }
-  
+
   if(length(data@data$X)>0){
     writeLAS(data, file=paste0(dirPath, "/cloud_", gridN,".laz"))
   }
@@ -73,6 +73,9 @@ makeDSMs <- function(X, pointCloudPath, pathSave, crsProj, pathBuffer, plotDSM,
   ## need to assign CRS
   crs(outFile) <- crsProj
 
+  ## resample to DEM to standardize
+  dem <- rast("spatialData/bci/LidarDEM_BCI.tif")
+  outFile <- resample(outFile, dem, method="cubic")
   
   if(plotDSM) plot(outFile, main=targetDates[[X]])
   if(saveDSM) writeRaster(outFile, filename=pathSave, overwrite=TRUE)

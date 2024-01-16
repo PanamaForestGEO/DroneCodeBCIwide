@@ -28,16 +28,16 @@ createCHM <- function(X, pathData, demBCI, crsProj, changeType){
   
   ## Bring in dsm
   path <- list.files(pathData, full.names=TRUE)
-  dsm <- rast(path[grepl(X, path)])
-  
+  dsm <- rast(path[grepl(paste0(X, ".tif"), path)])
+
   ## bring in BCI dem and resample to match dsm
   dem <- rast(demBCI)
-  demC <- resample(dem, dsm, method="cubic")
+  # demC <- resample(dem, dsm, method="cubic")
   
   ## create canopy height model by subtracting ground elevation
   ### note there may be some negative values - this is ok because it's relative
   ### to the prior lidar data
-  chm <- dsm - demC # (i.e. dsm - dem = chm)
+  chm <- dsm - dem # (i.e. dsm - dem = chm)
   
   return(chm)
 }
