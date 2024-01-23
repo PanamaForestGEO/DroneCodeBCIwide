@@ -56,12 +56,12 @@ catObj <- catalog(pathPointCloud)
 dirPath <- gsub("1_raw", "2_standardized", pathPointCloud)
 if(!dir.exists(dirPath)) dir.create(dirPath)
 
-cl <- makeCluster(10)
+cl <- makeCluster(9)
 clusterEvalQ(cl, library(terra))
 clusterEvalQ(cl, library(lidR))
 clusterExport(cl, c("gridInfo", "catObj", "dirPath"))
 parSapply(cl, 1:nrow(gridInfo), standardizePC, gridInfo, catObj, overlap=30, 
-           dirPath, type="align", ROI=bciBorder)
+          dirPath, type="align", ROI=bciBorder)
 stopCluster(cl)
 
 ##-------------------------------------------------------##
@@ -124,7 +124,7 @@ script <- "makeDSM"
 source("scripts/args.R", local=TRUE)
 
 # 2. Run the main function and save DSMs if wanted
-targetDates <- "2023-10-12"
+targetDates <- c("2023-06-19", "2023-10-12")
 outputList <- lapply(1:length(targetDates), makeDSMs, pointCloudPath, pathSave,
                       crsProj, pathBuffer, plotDSM, saveDSM, returnDSM=TRUE)
 
@@ -133,15 +133,3 @@ sapply(targetDates, function(X){
   r <- rast(paste0(pathList$pathDSM, "DSM_", X, "_corrected.tif"))
   plot(r)
 })
-
-# 2a. If necessary, crop lidar data to extent of photogrammetry data and save
-# cropLidar <- function(dsmLPath, dsmPPath){
-#   dsmLidar <- rast(dsmLPath)
-#   dsmPhtgrm <- rast(dsmPPath)
-#   dsmLidar <- crop(dsmLidar, dsmPhtgrm)
-  
-#   writeRaster(dsmLidar, dsmLPath)
-# }
-# dsmLPath <- "Data_HeightRasters/DSM_2009.tif"
-# dsmPPath <- "Data_HeightRasters/DSM_2015_corrected.tif"
-# cropLidar(dsmLPath, dsmPPath)
