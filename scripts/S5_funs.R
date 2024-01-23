@@ -19,7 +19,7 @@
 loadOrtho <- function(X, pathData, resN){
   f <- list.files(pathData, full.names=TRUE,
                          pattern=paste0(X, ".*Whole.*_crop.tif"))
-  return(rast(f[grepl(paste0("stand", resN*100), f)]))
+  return(rast(f[grepl(paste0("stand", resN*100), f)])) 
   # return(rast(list.files(pathData, full.names=TRUE,
   #                        pattern=paste0(X, ".*Subset.*masked.tif"))))
 }
@@ -60,7 +60,7 @@ indexFun <- function(i, r, g, b){
   
   if(i=="cos"){
     ## rgb for target color green
-    ### see `gapIndex.R` for how target was claculated
+    ### see `gapIndex.R` for how target was calculated
     R <- 182
     G <- 203
     B <- 106
@@ -309,4 +309,91 @@ gapPolyMetrics <- function(X, targetDates, saveGapsPath, saveChangePath,
   } else {
     return(print("yay!"))
   }
+}
+
+identifyGapsMetrics <- function(X, targetDates, saveChangePath, thresholds, gdalOutDir, 
+                                vecRemove=NULL, saveGapFiles, saveGapsPath){
+  dateStart <- targetDates[X-1]
+  dateEnd <- targetDates[X]
+  print(paste0("Processing change between ", dateStart, " and ", dateEnd, 
+              " at ", format(Sys.time())))
+
+  ## load flight change rasters
+  outPath <- gsub("D1", dateStart, saveChangePath)
+  outPath <- gsub("D2", dateEnd, outPath)
+  change <- rast(outPath)
+
+  if(!is.null(vecRemove)) change <- mask(change, vecRemove, inverse=TRUE)
+
+  # Step 1: Filter change raster to only retain cells that have experienced no greater
+  ## than a `threshold` depth (height) change, then save
+  print("Step 1/5 - Mask change raster based on gap magnitude threshold")
+  rclMat <- matrix(c(-9999, thresholds$shortThreshMin, NA,
+                      thresholdMin = thresholds$shortThreshMin, 
+                          thresholdMax = thresholds$shortThreshMax, 1,
+                      thresholdMax = thresholds$shortThreshMax, 9999, NA), 
+                  nrow=3, byrow=TRUE)
+  changeTif <- classify(change, rclMat, right=TRUE, include.lowest=TRUE)
+
+  fileLab <- gsub(paste0("change", dateStart), paste0("class", dateStart), outPath)
+  fileLab <- gsub("changeIndex", gdalOutDir, fileLab)
+  writeRaster(changeTif, fileLab, overwrite=TRUE)
+
+  # Step 2: Create patches by grouping cells that are surrounded by NA
+  #         aka convert all continuous pixels into separate polygons
+  ## using gdal is much faster than terra::patches()
+  ### NOTE for future we can do 8-directions instead of 4 (default), just have to
+  ### add in a "-8" flag in the gdal command
+  print("Step 2/5 - Identify gap clusters using gdal_polygonize")
+  outputFile <- gsub("class", "poly", fileLab)
+  outputFile <- gsub(".tif", ".shp", outputFile)
+  cmd <- paste0("gdal_polygonize.py ", fileLab, " ", outputFile, " -overwrite")
+  system(cmd)
+
+  # Step 3: Read in polygons, calculate area, and remove any that are below our min size threshold
+  print("Step 3/5 - Remove gaps below size threshold")
+  v <- vect(outputFile)
+  v$area_m2 <- expanse(v, unit="m")
+  v <- v[v$area_m2 >= thresholds$gapSizeMin]
+
+  # Step 4: Calculate other gap metrics and build output table
+  print("Step 4/5 - Calculate other gap metrics and build metrics table")
+  ## polygon centroids + perim and area
+  polyM <- as.data.table(crds(centroids(v)))
+  colnames(polyM) <- c("centroidX", "centroidY")
+  polyM$area_m2 <- v$area_m2
+  polyM$perim_m <- perim(v)
+
+  ## quantiles of spectral / structural values
+  dt <- as.data.table(extract(change, v))
+  colnames(dt) <- c("gapID", "gapChange")
+  meanChange <- dt[, .(quant05_m=quantile(gapChange, 0.05, na.rm=TRUE),
+                      quant25_m=quantile(gapChange, 0.25, na.rm=TRUE),
+                      quant75_m=quantile(gapChange, 0.75, na.rm=TRUE),
+                      quant95_m=quantile(gapChange, 0.95, na.rm=TRUE),
+                      median_m = median(gapChange, 0.50, na.rm=TRUE),
+                      mean_m = mean(gapChange, na.rm=TRUE)), 
+                  by=.(gapID)]
+
+  ## construct full table
+  out <- cbind(meanChange, polyM, 
+              data.table(dateStart=as.numeric(as.Date(dateStart)), 
+                          dateEnd=as.numeric(as.Date(dateEnd))))
+
+  # Step 5: Save files
+  print("Step 5/5 - Save gap files if instructed")
+  if(saveGapFiles){
+      saveGapsPath <- gsub("D2", dateEnd, gsub("D1", dateStart, saveGapsPath))
+      polyPath <- gsub("fileType", "polygons", gsub(".ext", ".shp", saveGapsPath))
+      metricsPath <- gsub("fileType", "metrics", gsub(".ext", ".csv", saveGapsPath))
+
+      writeVector(v, polyPath, overwrite=TRUE)
+      fwrite(out, metricsPath)
+  }
+
+  print(paste0("Finished processing change between ", dateStart, " and ", dateEnd, 
+              " at ", format(Sys.time())))
+
+  print("Finished with gaps hoo-rah")
+  return(list(gapPoly = v, gapMetrics = out))
 }

@@ -54,6 +54,29 @@ crs(vecRemove) <- "epsg: 32617"
 writePath <- "droneData/droneOrthomosaics/shapefiles/anomalyPolygons/structural/"
 writeVector(vecRemove, paste0(writePath,"anom_2023-10-12.shp"), overwrite=TRUE)
 
+#########################################################################################
+# Option 1: gdal
+## - spectral = ~1 minute
+## - structural = 5 seconds
+
+## ------------------------------------------------- ##
+# C. Identify gaps, calculate metrics, and save outputs
+gdalOutDir <- ifelse(changeType=="ortho", "intermediateIndex", "intermediateCanopy")
+gdalOutDirFull <- paste0("droneData/processedChange/", gdalOutDir)
+if(!dir.exists(gdalOutDirFull)) dir.create(gdalOutDirFull)
+
+saveGapFiles <- FALSE
+saveGapsPath <- "droneData/processedChange/gapsIndex/fileType/gapsD1_D2_res20.ext"
+
+gapOutputs <- sapply(2:length(targetDates), identifyGapsMetrics, targetDates, 
+                    saveChangePath, thresholds, gdalOutDir, vecRemove, saveGapFiles, 
+                    saveGapsPath)
+
+#########################################################################################
+# Option 2: terra
+## - spectral = > 20 mins
+## - structural = ~6 mins
+
 ## ------------------------------------------------- ##
 # C. Identify gaps from CHMs or numeric gaps from differenced RGB index
 ## **NB**: Identifying the gaps takes ~20-30 mins per raster
@@ -69,7 +92,7 @@ gapRasters <- lapply(2:length(targetDates), identifyGaps, targetDates,
 ## if returnAll=TRUE, a list is returned. Otherwise, nothing is returned.
 gapOutputs <- lapply(2:length(targetDates), gapPolyMetrics, targetDates,
                      saveGapsPath, saveChangePath, returnAll=FALSE)
-
+            
 listNames <- sapply(2:length(targetDates), function(X){
   return(paste0("gaps", targetDates[X-1], "_", targetDates[X]))
 })
