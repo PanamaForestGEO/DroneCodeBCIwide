@@ -1,11 +1,9 @@
 ##########################################################
-## Purpose: Functions for post-alignment script 2_DefineGaps.R
+## Purpose: Functions for post-alignment script S5_DefineGaps.R
 ##
 ## Creator: KC Cushman, 2020
 ## Edited: Mia Mitchell, Ian McGregor
-## Contact: 
-## System: R Version 4.2.2, Aug 2023 (edited)
-## Last modified: Aug 2023
+## System: R Version 4.2.2, Aug 2023 
 ##########################################################
 
 # --------------------------------------------------------------------#
