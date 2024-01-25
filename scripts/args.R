@@ -1,3 +1,11 @@
+##########################################################
+## Purpose: Define variables and parameters for gap identification scripts
+##
+## Creator: KC Cushman, 2020
+## Edited: Mia Mitchell, Ian McGregor
+## Contact: Ian McGregor, mcgregori@caryinstitute.org
+## System: R Version 4.2.2, Sep 2023 (edited)
+##########################################################
 
 # dates and resolutions of whole island flights
 flightInfo <- read.csv("droneData/metadata/metaIslandFlights.csv")
