@@ -1,17 +1,15 @@
 ##########################################################
-## Purpose: Define canopy gaps from drone flights
+## Purpose: Define structural or spectral gaps from drone flights
 ##
-## Input: whole-island DSMs
-## Output: 3 separate files
-##        - raster of gaps between two flight dates
-##        - shapefile of gap polygons (derived from raster)
+## Input: DSMs or orthomosaics
+## Output: 2 separate files
+##        - shapefile of gap polygons
 ##        - metrics csv with mean canopy height, perim, area, and poly centroid
 ##
 ## Creator: KC Cushman, 2020
 ## Edited: Mia Mitchell, Ian McGregor
 ## Contact: Ian McGregor, mcgregori@caryinstitute.org
 ## System: R Version 4.2.2, Sep 2023 (edited)
-## Last modified: Sep 2023
 ##########################################################
 library(terra)
 library(data.table)
