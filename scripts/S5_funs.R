@@ -7,20 +7,11 @@
 ##########################################################
 
 # --------------------------------------------------------------------#
-## applyQAQC = apply QAQC checks (primarily for flights < 2020)
 ## createCHM = create canopy height models from DSMs
-## getForestGaps = adapted from ForestGapR::getForestGaps() for terra package
-## identifyGaps = calculate canopy height change and identify where gaps are
-## loadGapFiles = load necessary gap files
-## gapPolyMetrics = create gap polygons and calculate metrics
+## timeChange = difference the CHMs or index rasters from two flights
+## processFlightDiff = calculate differences between two flights
+## identifyGapsMetrics = create gap polygons and calculate metrics
 # --------------------------------------------------------------------#
-loadOrtho <- function(X, pathData, resN){
-  f <- list.files(pathData, full.names=TRUE,
-                         pattern=paste0(X, ".*alignedNew.*_crop.tif"))
-  return(rast(f[grepl(paste0("stand", resN*100), f)])) 
-  # return(rast(list.files(pathData, full.names=TRUE,
-  #                        pattern=paste0(X, ".*Subset.*masked.tif"))))
-}
 createCHM <- function(X, pathData, demBCI, crsProj, changeType){
   print(paste0("Creating chm for ", X))
   
@@ -39,34 +30,6 @@ createCHM <- function(X, pathData, demBCI, crsProj, changeType){
   
   return(chm)
 }
-indexFun <- function(i, r, g, b){
-  ## best results
-  if(i=="exg") index <- (2*g)-r-b
-  if(i=="exgr") index <- ((2*g)-r-b) - ((1.4*r)-g)
-  if(i=="tgi") index <- 0.5*((670-480)*(r-g)-(670-550)*(r-b))
-  
-  ## tried indices, good results, still some noise
-  if(i=="gcc") index <- g / (r+g+b)
-  if(i=="gli") index <- ((2*g)-r-b) / ((2*g)+r+b)
-  if(i=="rgri") index <- r/g
-  if(i=="ngbdi") index <- (g-b) / (g+b)
-  if(i=="mgrvi") index <- (g^2 - r^2) / (g^2 + r^2)
-  
-  ## tried indices, not great results
-  if(i=="vari") index <- (g-r) / (g+r-b)
-  if(i=="ngrdi") index <- (g-r) / (g+r)
-  
-  if(i=="cos"){
-    ## rgb for target color green
-    ### see `gapIndex.R` for how target was calculated
-    R <- 182
-    G <- 203
-    B <- 106
-    index <- (R*r+G*g+B*b)*((R*r+G*g+B*b)) / ((R*R+G*G+B*B)*(r*r+g*g+b*b))
-  }
-  
-  return(index)
-}
 timeChange <- function(X, flightTifs, changeType, saveChange, savePath, 
                        indexName=""){
   dateStart <- gsub("^.*_", "", names(flightTifs)[X-1])
@@ -74,17 +37,6 @@ timeChange <- function(X, flightTifs, changeType, saveChange, savePath,
   
   if(changeType=="structural"){
     change <- flightTifs[[X]] - flightTifs[[(X-1)]]
-  } else if(changeType=="ortho"){
-    print(paste0("Calculating spectral index ", indexName, " for date ", X, 
-                 " versus date ", X-1))
-    focal <- lapply(1:2, function(w){
-      if(w==1) tif <- flightTifs[[(X-1)]] else tif <- flightTifs[[X]]
-      tif <- indexFun(indexName, r=tif[[1]], g=tif[[2]], b=tif[[3]])
-      return(tif)
-    })
-    
-    # print*********************************************************
-    change <- focal[[2]] - focal[[1]]
   }
   
   if(saveChange){
@@ -97,7 +49,7 @@ timeChange <- function(X, flightTifs, changeType, saveChange, savePath,
 }
 processFlightDiff <- function(targetDates, changeType, pathData,
                               demBCI, crsProj, saveChange, 
-                              saveChangePath, resN, indexName,
+                              saveChangePath,
                               validated=FALSE, applyBufferMask=FALSE){
   
   if(changeType=="structural"){
@@ -105,25 +57,8 @@ processFlightDiff <- function(targetDates, changeType, pathData,
     ## ~10 sec per DSM 
     flightTifs <- lapply(targetDates, createCHM, pathData, demBCI, crsProj, 
                         changeType)
-  } else if(changeType=="ortho"){
-    # 1. if applyBufferMask=TRUE, crop the full orthophotos in the same way as 
-    #   for the point cloud prior to calculating change (and then saved to 
-    #   the `path` directory). Note that this takes a long time, but (in 
-    #   addition to standardizing both processes) can save some time when 
-    #   identifying gaps later.
-    ##  If it's FALSE, it means they are already saved, and thus are just 
-    ##  loaded as in below.
-    if(applyBufferMask){
-      files <- list.files(pathData, pattern="BCI.tif", full.names=TRUE)
-      flightTifs <- lapply(files, bufferMask, pathAge, bufferPath, crsProj,
-                           changeType)
-    } else {
-      flightTifs <- lapply(targetDates, loadOrtho, pathData, resN)
-      # flightTifs <- list("x2023-08-15" = rast("droneData/spectralExVicente/BCI_50ha_2023_05_23_local.tif"),
-      #                    "x2023-10-24" = rast("droneData/spectralExVicente/BCI_50ha_2023_05_30_local.tif"))
-    }
   }
-  names(flightTifs) <- paste0("res", resN*100, "_", targetDates)
+  names(flightTifs) <- paste0(targetDates)
   
   # 2. Create change rasters between successive flights
   ## if CHMs, this is a simple subtraction of previous from current flight
