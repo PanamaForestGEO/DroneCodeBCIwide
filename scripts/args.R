@@ -32,12 +32,6 @@ if(script=="standardize"){
   pathExt <- paste0(path, "shapefiles/minCommonExtent/")
   shpName <- "minCommonExtent.shp"
 
-  if(changeType=="ortho"){
-    pathInput <- paste0(path, "1_original")
-    pathStandard <- paste0(path, "2_standardized/")
-    pathMask <- "3_masked"
-  }
-
   if(changeType=="structural"){
     pathInput <- pathStandard <-  "droneData/pointClouds/5_dsm/"
     pathMask <- "6_dsmMasked"
@@ -75,35 +69,11 @@ if(script=="changeGaps"){
     thresholds <- list(shortThreshMin = -9999, shortThreshMax = -5, 
                        gapSizeMin = 25, gapSizeMax = 10^6,
                        directions = 4)
-  } else if(changeType=="ortho"){
-    pathOrtho <- "droneData/droneOrthomosaics/"
-    pathData <- paste0(pathOrtho, "3_masked")
-    vecRemoveShp <- paste0(vecRemovePath, "spectral/clouds_2023-09.shp")
-    ## for above, 2022-07 or 2023-09
-
-    saveGapsPath <- gsub("Sl", "Spectral", 
-                      gsub(".ext", paste0("_res", resN*100, ".ext", saveGapsPath)))
-    gdalOutDir <- gsub("fileType.*", "gdalOut", saveGapsPath)
-    if(!dir.exists(gdalOutDir)) dir.create(gdalOutDir)
-    
-    saveGapFiles <- TRUE
-    saveChangePath <- paste0(savePath, "changeSpectral/changeD1_D2_res", resN*100, ".tif")
-    
-    # NOTE - change thresholds based on index
-    indexName <- "exgr"
-    thresholds <- list(shortThreshMin = -9999, shortThreshMax = -75, 
-                       gapSizeMin = 25, gapSizeMax = 10^6,
-                       directions = 4)
-  }
+  } 
 }
 if(script == "vis"){
   dataType <- c("rasters", "polygons", "metrics")
-  
-  if(changeType=="ortho"){
-    dataPath <- "processedChange/gapsIndex/"
-  } else if(changeType=="chm"){
-    dataPath <- "processedChange/gapsCanopy"
-  }
-  
-  targetDates <- flightDates[flightDates > as.Date("2021-01-01")]
+  dataPath <- "processedChange/gapsCanopy"
+  targetDates <- c("2023-10", "2023-11")
+  # targetDates <- flightDates[flightDates > as.Date("2021-01-01")]
 }
