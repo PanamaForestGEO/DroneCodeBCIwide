@@ -230,10 +230,4 @@ identifyGapsMetrics <- function(X, targetDates, saveChangePath, thresholds, gdal
       writeVector(v, polyPath, overwrite=TRUE)
       fwrite(out, metricsPath)
   }
-
-  print(paste0("Finished processing change between ", dateStart, " and ", dateEnd, 
-              " at ", format(Sys.time())))
-
-  print("Finished with gaps hoo-rah")
-  return(list(gapPoly = v, gapMetrics = out))
 }

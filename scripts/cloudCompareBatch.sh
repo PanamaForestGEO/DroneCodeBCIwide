@@ -2,7 +2,8 @@
 
 # General variables
 totalN=844
-filePath="/Users/ianmcgregor/Documents/labData/droneData/pointClouds/"
+baseDir="$PWD"
+filePath=${baseDir}"droneData/pointClouds/"
 
 # Reference point cloud
 refDate="2023-06-19"
@@ -11,7 +12,7 @@ refFilePrefix="/cloud_"
 # Target point cloud
 targetDate="2023-10-12"
 targetFilePrefix="/cloud_"
-targetPath="/Users/ianmcgregor/Documents/labData/droneData/pointClouds/"
+targetPath=${baseDir}"droneData/pointClouds/"
 
 ## Build the full file paths
 alignPath="${filePath}3_cloudCompare/"
