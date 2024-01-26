@@ -53,22 +53,10 @@ writePath <- "droneData/droneOrthomosaics/shapefiles/anomalyPolygons/structural/
 writeVector(vecRemove, paste0(writePath,"anom_2023-10-12.shp"), overwrite=TRUE)
 
 ## ------------------------------------------------- ##
-# C. Identify gaps from CHMs or numeric gaps from differenced RGB index
-## **NB**: Identifying the gaps takes ~20-30 mins per raster
+# C. Identify gaps, calculate metrics, and save outputs
 vecRemove <- vect(paste0(writePath, "anom_2023-10-12.shp"))
 vecRemove <- NULL
-gapRasters <- lapply(2:length(targetDates), identifyGaps, targetDates, 
-                     changeRasters, saveChangePath, thresholds, 
-                     returnGaps=TRUE, saveGaps=TRUE, saveGapsPath, 
-                     vecRemove)
 
-## ------------------------------------------------- ##
-# 3. Create gap polygons and calculate metrics
-## if returnAll=TRUE, a list is returned. Otherwise, nothing is returned.
-gapOutputs <- lapply(2:length(targetDates), gapPolyMetrics, targetDates,
-                     saveGapsPath, saveChangePath, returnAll=FALSE)
-
-listNames <- sapply(2:length(targetDates), function(X){
-  return(paste0("gaps", targetDates[X-1], "_", targetDates[X]))
-})
-names(gapOutputs) <- listNames
+gapOutputs <- sapply(2:length(targetDates), identifyGapsMetrics, targetDates, 
+                    saveChangePath, thresholds, gdalOutDir, vecRemove, saveGapFiles, 
+                    saveGapsPath)

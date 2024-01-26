@@ -52,9 +52,10 @@ if(script=="standardize"){
 }
 if(script=="changeGaps"){
   # targetDates <- flightDates[flightDates > as.Date("2021-01-01")]
-  targetDates <- c("2023-06-19", "2023-10-12")
+  targetDates <- c("2023-10", "2023-11")
   savePath <- "droneData/processedChange/"
   vecRemovePath <- "droneData/droneOrthomosaics/shapefiles/anomalyPolygons/"
+  saveGapsPath <- paste0(savePath, "gapsSl/fileType/gapsD1_D2.ext")
   
   if(changeType=="structural"){
     resN <- 1
@@ -63,8 +64,13 @@ if(script=="changeGaps"){
     pathData <- paste0(pathHeight, "6_dsmMasked")
     vecRemoveShp <- paste0(vecRemovePath, "lidar/anomalyRemove.shp")
     demBCI <- "spatialData/bci/LidarDEM_BCI.tif"
-    saveChangePath <- paste0(savePath, "changeHeight/changeD1_D2.tif")
-    saveGapsPath <- paste0(savePath, "gapsCanopy/rasters/gapsD1_D2.tif")
+
+    saveGapsPath <- gsub("Sl", "Structural", saveGapsPath)
+    gdalOutDir <- gsub("fileType.*", "gdalOut", saveGapsPath)
+    if(!dir.exists(gdalOutDir)) dir.create(gdalOutDir)
+
+    saveGapFiles <- TRUE
+    saveChangePath <- paste0(savePath, "changeStructural/changeD1_D2.tif")
     applyBufferMask <- FALSE
     thresholds <- list(shortThreshMin = -9999, shortThreshMax = -5, 
                        gapSizeMin = 25, gapSizeMax = 10^6,
@@ -72,11 +78,16 @@ if(script=="changeGaps"){
   } else if(changeType=="ortho"){
     pathOrtho <- "droneData/droneOrthomosaics/"
     pathData <- paste0(pathOrtho, "3_masked")
-    vecRemoveShp <- paste0(vecRemovePath, "spectral/clouds_2023-09-21.shp")
-    ## for above, 2022-07-21 or 2023-09-21
+    vecRemoveShp <- paste0(vecRemovePath, "spectral/clouds_2023-09.shp")
+    ## for above, 2022-07 or 2023-09
+
+    saveGapsPath <- gsub("Sl", "Spectral", 
+                      gsub(".ext", paste0("_res", resN*100, ".ext", saveGapsPath)))
+    gdalOutDir <- gsub("fileType.*", "gdalOut", saveGapsPath)
+    if(!dir.exists(gdalOutDir)) dir.create(gdalOutDir)
     
-    saveChangePath <- paste0(savePath, "changeIndex/changeD1_D2_res", resN*100, ".tif")
-    saveGapsPath <- paste0(savePath, "gapsIndex/rasters/gapsD1_D2_res", resN*100, ".tif")
+    saveGapFiles <- TRUE
+    saveChangePath <- paste0(savePath, "changeSpectral/changeD1_D2_res", resN*100, ".tif")
     
     # NOTE - change thresholds based on index
     indexName <- "exgr"
