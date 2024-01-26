@@ -16,7 +16,7 @@ library(data.table)
 script <- "changeGaps"
 
 # 0. Set and define functions and variables
-changeType <- "structural" # "structural" or "ortho"
+changeType <- "structural" # "structural"
 
 # 0a. Define functions
 source("scripts/S5_funs.R")
@@ -31,7 +31,7 @@ source("scripts/args.R", local=TRUE)
 ## for "ortho" changeType, calculate change btwn RGB index of flights
 ### Please see comments in the function for applyBufferMask argument
 changeRasters <- processFlightDiff(targetDates, changeType, pathData, demBCI, crsProj, 
-                                      saveChange=TRUE, savePath, resN, indexName,
+                                      saveChange=TRUE, savePath,
                                    validated=FALSE, applyBufferMask=FALSE)
 
 ## ------------------------------------------------- ##
