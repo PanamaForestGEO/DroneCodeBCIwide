@@ -30,8 +30,7 @@ createCHM <- function(X, pathData, demBCI, crsProj, changeType){
   
   return(chm)
 }
-timeChange <- function(X, flightTifs, changeType, saveChange, savePath, 
-                       indexName=""){
+timeChange <- function(X, flightTifs, changeType, saveChange, savePath){
   dateStart <- gsub("^.*_", "", names(flightTifs)[X-1])
   dateEnd <- gsub("^.*_", "", names(flightTifs)[X])
   
