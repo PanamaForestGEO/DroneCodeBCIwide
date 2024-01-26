@@ -1,17 +1,15 @@
 ##########################################################
-## Purpose: Define canopy gaps from drone flights
+## Purpose: Define structural or spectral gaps from drone flights
 ##
-## Input: whole-island DSMs
-## Output: 3 separate files
-##        - raster of gaps between two flight dates
-##        - shapefile of gap polygons (derived from raster)
+## Input: DSMs or orthomosaics
+## Output: 2 separate files
+##        - shapefile of gap polygons
 ##        - metrics csv with mean canopy height, perim, area, and poly centroid
 ##
 ## Creator: KC Cushman, 2020
 ## Edited: Mia Mitchell, Ian McGregor
 ## Contact: Ian McGregor, mcgregori@caryinstitute.org
 ## System: R Version 4.2.2, Sep 2023 (edited)
-## Last modified: Sep 2023
 ##########################################################
 library(terra)
 library(data.table)
@@ -54,46 +52,11 @@ crs(vecRemove) <- "epsg: 32617"
 writePath <- "droneData/droneOrthomosaics/shapefiles/anomalyPolygons/structural/"
 writeVector(vecRemove, paste0(writePath,"anom_2023-10-12.shp"), overwrite=TRUE)
 
-#########################################################################################
-# Option 1: gdal
-## - spectral = ~1 minute
-## - structural = 5 seconds
-
 ## ------------------------------------------------- ##
 # C. Identify gaps, calculate metrics, and save outputs
-gdalOutDir <- ifelse(changeType=="ortho", "intermediateIndex", "intermediateCanopy")
-gdalOutDirFull <- paste0("droneData/processedChange/", gdalOutDir)
-if(!dir.exists(gdalOutDirFull)) dir.create(gdalOutDirFull)
-
-saveGapFiles <- FALSE
-saveGapsPath <- "droneData/processedChange/gapsIndex/fileType/gapsD1_D2_res20.ext"
+vecRemove <- vect(paste0(writePath, "anom_2023-10-12.shp"))
+vecRemove <- NULL
 
 gapOutputs <- sapply(2:length(targetDates), identifyGapsMetrics, targetDates, 
                     saveChangePath, thresholds, gdalOutDir, vecRemove, saveGapFiles, 
                     saveGapsPath)
-
-#########################################################################################
-# Option 2: terra
-## - spectral = > 20 mins
-## - structural = ~6 mins
-
-## ------------------------------------------------- ##
-# C. Identify gaps from CHMs or numeric gaps from differenced RGB index
-## **NB**: Identifying the gaps takes ~20-30 mins per raster
-vecRemove <- vect(paste0(writePath, "anom_2023-10-12.shp"))
-vecRemove <- NULL
-gapRasters <- lapply(2:length(targetDates), identifyGaps, targetDates, 
-                     changeRasters, saveChangePath, thresholds, 
-                     returnGaps=TRUE, saveGaps=TRUE, saveGapsPath, 
-                     vecRemove)
-
-## ------------------------------------------------- ##
-# 3. Create gap polygons and calculate metrics
-## if returnAll=TRUE, a list is returned. Otherwise, nothing is returned.
-gapOutputs <- lapply(2:length(targetDates), gapPolyMetrics, targetDates,
-                     saveGapsPath, saveChangePath, returnAll=FALSE)
-            
-listNames <- sapply(2:length(targetDates), function(X){
-  return(paste0("gaps", targetDates[X-1], "_", targetDates[X]))
-})
-names(gapOutputs) <- listNames
