@@ -7,11 +7,16 @@
 ##########################################################
 
 # --------------------------------------------------------------------#
+## loadOrtho = load orthomosaics as tif files in list
 ## createCHM = create canopy height models from DSMs
+## indexFun = function for calculating a spectral index of the orthomosaics
 ## timeChange = difference the CHMs or index rasters from two flights
 ## processFlightDiff = calculate differences between two flights
+## loadMasks = load mask polygon shapefiles
 ## identifyGapsMetrics = create gap polygons and calculate metrics
+## defineGapsWrap = wrapper for the main workflow
 # --------------------------------------------------------------------#
+
 createCHM <- function(X, pathData, demBCI, crsProj, changeType){
   print(paste0("Creating chm for ", X))
   
@@ -30,7 +35,8 @@ createCHM <- function(X, pathData, demBCI, crsProj, changeType){
   
   return(chm)
 }
-timeChange <- function(X, flightTifs, changeType, saveChange, savePath){
+timeChange <- function(X, flightTifs, changeType, saveChange, savePath, 
+                       indexName=""){
   dateStart <- gsub("^.*_", "", names(flightTifs)[X-1])
   dateEnd <- gsub("^.*_", "", names(flightTifs)[X])
   
@@ -48,7 +54,7 @@ timeChange <- function(X, flightTifs, changeType, saveChange, savePath){
 }
 processFlightDiff <- function(targetDates, changeType, pathData,
                               demBCI, crsProj, saveChange, 
-                              saveChangePath,
+                              saveChangePath, resN, indexName,
                               validated=FALSE, applyBufferMask=FALSE){
   
   if(changeType=="structural"){
@@ -57,11 +63,11 @@ processFlightDiff <- function(targetDates, changeType, pathData,
     flightTifs <- lapply(targetDates, createCHM, pathData, demBCI, crsProj, 
                         changeType)
   }
-  names(flightTifs) <- paste0(targetDates)
+  names(flightTifs) <- paste0("res", resN*100, "_", targetDates)
   
   # 2. Create change rasters between successive flights
-  ## if CHMs, this is a simple subtraction of previous from current flight
-  ## if orthos, you first calculate a spectral RGB index and then difference
+  ## if CHMs (structural), this is a simple subtraction of previous from current flight
+  ## if orthos (spectral), you first calculate a spectral RGB index and then difference
   ## the previous and current photos.
   changeFlights <- lapply(2:length(targetDates), timeChange, flightTifs,
                           changeType, saveChange, saveChangePath, indexName)
@@ -87,8 +93,23 @@ processFlightDiff <- function(targetDates, changeType, pathData,
   }
   return(list(changeFlights=changeFlights, flightTifs=flightTifs))
 }
+loadMasks <- function(dateStart, dateEnd, maskPath, buildingPath){
+  f <- list.files(maskPath, pattern=".shp", full.names=TRUE)
+  f <- f[grepl(paste0(c(dateStart, dateEnd), collapse="|"), f)]
+
+  maskList <- lapply(f, vect)
+
+  if(length(maskList) > 0){
+    names(maskList) <- paste0("x", gsub(".*mask_", "", gsub(".shp", "", f)))
+  }
+
+  ## BCI building outlines
+  maskList$buildings <- vect(buildingPath)
+
+  return(maskList)
+}
 identifyGapsMetrics <- function(X, targetDates, saveChangePath, thresholds, gdalOutDir, 
-                                vecRemove=NULL, saveGapFiles, saveGapsPath){
+                                maskPath, buildingPath, saveGapFiles, saveGapsPath){
   dateStart <- targetDates[X-1]
   dateEnd <- targetDates[X]
   print(paste0("Processing change between ", dateStart, " and ", dateEnd, 
@@ -99,11 +120,18 @@ identifyGapsMetrics <- function(X, targetDates, saveChangePath, thresholds, gdal
   outPath <- gsub("D2", dateEnd, outPath)
   change <- rast(outPath)
 
-  if(!is.null(vecRemove)) change <- mask(change, vecRemove, inverse=TRUE)
+  threshInfo <- paste0("_a", thresholds$gapSizeMin, 
+                        "d", thresholds$shortThreshMax*-1)
 
-  # Step 1: Filter change raster to only retain cells that have experienced no greater
+  # Step 1: Mask the polygons by buildings and anomalous areas if present
+  print("Step 1/6 - Mask change raster based on lidar anomalies")
+  masks <- loadMasks(dateStart, dateEnd, maskPath, buildingPath)
+  masksAll <- vect(masks)
+  change <- mask(change, masksAll, inverse=TRUE)
+
+  # Step 2: Filter change raster to only retain cells that have experienced no greater
   ## than a `threshold` depth (height) change, then save
-  print("Step 1/5 - Mask change raster based on gap magnitude threshold")
+  print("Step 2/6 - Mask change raster based on gap magnitude threshold")
   rclMat <- matrix(c(-9999, thresholds$shortThreshMin, NA,
                       thresholdMin = thresholds$shortThreshMin, 
                           thresholdMax = thresholds$shortThreshMax, 1,
@@ -119,20 +147,23 @@ identifyGapsMetrics <- function(X, targetDates, saveChangePath, thresholds, gdal
   ## using gdal is much faster than terra::patches()
   ### NOTE for future we can do 8-directions instead of 4 (default), just have to
   ### add in a "-8" flag in the gdal command
-  print("Step 2/5 - Identify gap clusters using gdal_polygonize")
+  print("Step 3/6 - Identify gap clusters using gdal_polygonize")
   outputFile <- gsub("class", "poly", fileLab)
   outputFile <- gsub(".tif", ".shp", outputFile)
+
+  outputFile <- gsub(".shp", paste0(threshInfo, ".shp"), outputFile)
+
   cmd <- paste0("gdal_polygonize.py ", fileLab, " ", outputFile, " -overwrite")
   system(cmd)
 
   # Step 3: Read in polygons, calculate area, and remove any that are below our min size threshold
-  print("Step 3/5 - Remove gaps below size threshold")
+  print("Step 4/6 - Remove gaps below size threshold")
   v <- vect(outputFile)
   v$area_m2 <- expanse(v, unit="m")
   v <- v[v$area_m2 >= thresholds$gapSizeMin]
 
   # Step 4: Calculate other gap metrics and build output table
-  print("Step 4/5 - Calculate other gap metrics and build metrics table")
+  print("Step 5/6 - Calculate other gap metrics and build metrics table")
   ## polygon centroids + perim and area
   polyM <- as.data.table(crds(centroids(v)))
   colnames(polyM) <- c("centroidX", "centroidY")
@@ -154,14 +185,54 @@ identifyGapsMetrics <- function(X, targetDates, saveChangePath, thresholds, gdal
   out <- cbind(meanChange, polyM, 
               data.table(dateStart=dateStart, dateEnd=dateEnd))
 
-  # Step 5: Save files
-  print("Step 5/5 - Save gap files if instructed")
-  if(saveGapFiles){
-      saveGapsPath <- gsub("D2", dateEnd, gsub("D1", dateStart, saveGapsPath))
-      polyPath <- gsub("fileType", "polygons", gsub(".ext", ".shp", saveGapsPath))
-      metricsPath <- gsub("fileType", "metrics", gsub(".ext", ".csv", saveGapsPath))
+  ## add gap ID back to the polygon shapefile as a column
+  v$gapID <- out$gapID
 
-      writeVector(v, polyPath, overwrite=TRUE)
-      fwrite(out, metricsPath)
+  # Step 5: Save files
+  print("Step 6/6 - Save gap files if instructed")
+  if(saveGapFiles){
+    ## carry through the threshold info to the file names
+    saveGapsPath <- gsub(".ext", paste0(threshInfo, ".ext"), saveGapsPath)
+    saveGapsPath <- gsub("D2", dateEnd, gsub("D1", dateStart, saveGapsPath))
+    polyPath <- gsub("fileType", "polygons", gsub(".ext", ".shp", saveGapsPath))
+    metricsPath <- gsub("fileType", "metrics", gsub(".ext", ".csv", saveGapsPath))
+
+    writeVector(v, polyPath, overwrite=TRUE)
+    fwrite(out, metricsPath)
+  }
+
+  print(paste0("Finished processing change between ", dateStart, " and ", dateEnd, 
+              " at ", format(Sys.time())))
+
+  print("Finished with gaps hoo-rah")
+  return(list(gapPoly = v, gapMetrics = out))
+}
+defineGapsWrap <- function(targetDates, changeType, pathData, demBCI, crsProj, 
+                          saveChange=TRUE, savePath, resN, indexName, validated, 
+                          saveChangePath, thresholds, gdalOutDir, maskPath, 
+                          buildingPath, saveGapFiles, saveGapsPath, runType){
+  ## ------------------------------------------------- ##
+  # A. Process difference between flights
+  ## for "chm" changeType, create canopy height models and calculate height 
+  ## change btwn flights
+  ### Please see comments in the function for applyBufferMask argument
+
+  if(runType %in% c("change", "all")){
+    changeRasters <- processFlightDiff(targetDates, changeType, pathData, demBCI, crsProj, 
+                                      saveChange=TRUE, savePath, resN, indexName,
+                                      validated, applyBufferMask=FALSE)
+    if(!validated){
+      print("Inspect height change rasters and draw polygons as needed")
+      return(changeRasters)
+    }
+  }
+
+  ## ------------------------------------------------- ##
+  # C. Identify gaps, calculate metrics, and save outputs
+  if(runType %in% c("gaps", "all")){
+    gapOutputs <- sapply(2:length(targetDates), identifyGapsMetrics, targetDates, 
+                      saveChangePath, thresholds, gdalOutDir, maskPath, buildingPath, saveGapFiles, 
+                      saveGapsPath)
+    return(gapOutputs)
   }
 }

@@ -19,23 +19,25 @@ script <- "changeGaps"
 changeType <- "structural" # "structural"
 
 # 0a. Define functions
-source("scripts/S5_funs.R")
+source("scripts/mod2_funs.R")
 
 # 0b. Define variables
 source("scripts/args.R", local=TRUE)
 
 ## ------------------------------------------------- ##
-# A. Process difference between flights
-## for "chm" changeType, create canopy height models and calculate height 
-## change btwn flights
-## for "ortho" changeType, calculate change btwn RGB index of flights
-### Please see comments in the function for applyBufferMask argument
-changeRasters <- processFlightDiff(targetDates, changeType, pathData, demBCI, crsProj, 
-                                      saveChange=TRUE, savePath,
-                                   validated=FALSE, applyBufferMask=FALSE)
+# A. Run main processing functions
+## if validated is FALSE, the function will stop to let you draw and save anomaly polygons
+## as in Part B below. Otherwise, if validated is TRUE then the full function will run.
+validated <- TRUE
+runType <- "all" # either "change" rasters only, "gaps" outputs only, or "all"
+
+defineGapsWrap(targetDates, changeType, pathData, demBCI, crsProj, 
+                saveChange=TRUE, savePath, resN, indexName, validated, 
+                saveChangePath, thresholds, gdalOutDir, maskPath, 
+                buildingPath, saveGapFiles, saveGapsPath, runType)
 
 ## ------------------------------------------------- ##
-# B. Inspect height change rasters (for CHMs only!)
+# B. Inspect height change rasters
 ## may need to play around with colors a bit
 for(i in 1:length(changeRasters)){
   if(i==1) pal <- colorRampPalette(c("black", "black", "black", "lightgrey", 

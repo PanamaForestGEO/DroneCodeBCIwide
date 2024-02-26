@@ -5,19 +5,22 @@
 ## Edited: Mia Mitchell, Ian McGregor
 ## Contact: 
 ## System: R Version 4.2.2, Aug 2023 (edited)
-## Last modified: Aug 2023
 ##########################################################
 library(terra)
 library(lidR)
 library(parallel)
 library(sf)
-source("scripts/L1_funs.R")
+source("scripts/mod1_funs.R")
 
 ## path definitions
-pathPointCloud <- "droneData/pointClouds/1_raw/2023-10-12"
+targetDate <- "2023-11"
+pathPointCloud <- paste0("droneData/pointClouds/1_raw/", targetDate)
 pathSoils <- "spatialData/bci/BCI_Soils/BCI_Soils.shp"
 pathGrid <- "droneData/pointClouds/gridInfo.csv"
 crsProj <- "epsg:32617"
+
+dirPath <- gsub("1_raw/", "4_aligned/tilesAlignedBCI_", pathPointCloud)
+if(!dir.exists(dirPath)) dir.create(dirPath)
 
 ##-------------------------------------------------------##
 # How to align point clouds with previous ones.
@@ -82,8 +85,6 @@ system("sh cloudCompareBatch.sh")
 ##    and save the new laz files
 gridInfo <- read.csv(pathGrid)
 catObj <- catalog(gsub("1_raw", "3_cloudCompare", pathPointCloud))
-dirPath <- gsub("1_raw/", "4_aligned/tilesAlignedBCI_", pathPointCloud)
-if(!dir.exists(dirPath)) dir.create(dirPath)
 
 cl <- makeCluster(10)
 clusterEvalQ(cl, library(terra))
@@ -113,7 +114,6 @@ for(i in 1:length(matFiles)){
 ##-------------------------------------------------------##
 ## 5. Create a DSM from the aligned point cloud
 ### Save 2 things: original DSM and masked to BCI boundary.
-source("scripts/L1_funs.R")
 
 ## Before running for the first time yourself, please ensure the folder
 ## and file names in the `prepMakeDSM()` function and `args.R` are set 
@@ -124,7 +124,7 @@ script <- "makeDSM"
 source("scripts/args.R", local=TRUE)
 
 # 2. Run the main function and save DSMs if wanted
-targetDates <- c("2023-06-19", "2023-10-12")
+targetDates <- c("2023-06", "2023-10")
 outputList <- lapply(1:length(targetDates), makeDSMs, pointCloudPath, pathSave,
                       crsProj, pathBuffer, plotDSM, saveDSM, returnDSM=TRUE)
 

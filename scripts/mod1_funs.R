@@ -5,7 +5,6 @@
 ## Edited: Mia Mitchell, Ian McGregor
 ## Contact: 
 ## System: R Version 4.2.2, Aug 2023 (edited)
-## Last modified: Aug 2023
 ##########################################################
 # --------------------------------------------------------------------#
 ## makeDSMs = make DSM from aligned lidar data using the lidR package

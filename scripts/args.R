@@ -9,7 +9,7 @@
 
 # dates and resolutions of whole island flights
 flightInfo <- read.csv("droneData/metadata/metaIslandFlights.csv")
-flightDates <- as.Date(flightInfo$date, format="%m/%d/%y")
+flightDates <- as.Date(paste0(flightInfo$id, "-01"))
 
 crsProj <- "epsg: 32617"
 resN <- resMin <- 0.2
@@ -27,26 +27,29 @@ if(script=="metadata"){
                        flightDate, "/mission", nMission, "/ulgDroneGPS")
 }
 if(script=="standardize"){
-  targetDates <- flightDates[flightDates > as.Date("2021-01-01")]
+  targetDates <- flightInfo$id[flightDates > as.Date("2020-01-01")]
   path <- "droneData/droneOrthomosaics/"
   pathExt <- paste0(path, "shapefiles/minCommonExtent/")
   shpName <- "minCommonExtent.shp"
 
-  if(changeType=="structural"){
-    pathInput <- pathStandard <-  "droneData/pointClouds/5_dsm/"
-    pathMask <- "6_dsmMasked"
-    resMin <- 1
-  }
-  
+  pathInput <- paste0(path, "1_original")
+  pathStandard <- paste0(path, "2_standardized/")
+  pathMask <- "3_masked"
   pathSpatial <- "spatialData/bci/"
   pathBuffer <- paste0(pathSpatial, 
                        "BCI_Outline_Minus25/BCI_Outline_Minus25.shp")
+
+  ## filter the age shapefile (only run if file doesn't exist)
+  ## NOTE this is irrelevant as of Jan 2024, potential to remove
   pathAge <- paste0(pathSpatial, 
                     "Ender_Forest_Age_1935/Ender_Forest_Age_1935.shp")
+  pathAgeFilt <- gsub(".shp", "_filtered.shp", pathAge)
+  
+  filterAge(pathAge, pathAgeFilt)
 }
 if(script=="changeGaps"){
-  # targetDates <- flightDates[flightDates > as.Date("2021-01-01")]
-  targetDates <- c("2023-10", "2023-11")
+  targetDates <- flightInfo$id[flightDates > as.Date("2020-01-01")]
+  # targetDates <- c("2023-06", "2023-11")
   savePath <- "droneData/processedChange/"
   vecRemovePath <- "droneData/droneOrthomosaics/shapefiles/anomalyPolygons/"
   saveGapsPath <- paste0(savePath, "gapsSl/fileType/gapsD1_D2.ext")
@@ -56,7 +59,7 @@ if(script=="changeGaps"){
     indexName <- ""
     pathHeight <- "droneData/pointClouds/"
     pathData <- paste0(pathHeight, "6_dsmMasked")
-    vecRemoveShp <- paste0(vecRemovePath, "lidar/anomalyRemove.shp")
+    maskPath <- paste0(maskPath, "structural")
     demBCI <- "spatialData/bci/LidarDEM_BCI.tif"
 
     saveGapsPath <- gsub("Sl", "Structural", saveGapsPath)
@@ -74,6 +77,5 @@ if(script=="changeGaps"){
 if(script == "vis"){
   dataType <- c("rasters", "polygons", "metrics")
   dataPath <- "processedChange/gapsCanopy"
-  targetDates <- c("2023-10", "2023-11")
-  # targetDates <- flightDates[flightDates > as.Date("2021-01-01")]
+  targetDates <- flightDates[flightDates > as.Date("2021-01-01")]
 }
