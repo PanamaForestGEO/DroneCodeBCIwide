@@ -1,0 +1,16 @@
+column,name,type,units,description
+A,flightID,date,yyyy-mm-dd,the date corresponding to the first flight date of the overall mission
+B,missionName,"string, character",NA,qualitative name of the mission
+C,drone,"string, character",NA,specific drone used for the mission
+D,dataType,"string, character",NA,"what kind of data was collected by the drone? E.g. RGB, lidar, multispectral (X-bands), hyperspectral"
+E,scale,"string, character",NA,"geographic scale of mission, e.g. full (island), partial, plot"
+F,gpsSource,"string, character",NA,"source of the GPS information, e.g. drone, RTK, PPK"
+G,sensor,"string, character",NA,name of sensor used. This should be the camera and/or specific lidar / hyperspectral sensor
+H,resolution_cm,"numeric, double",cm,"resolution of resultant orthophoto, cm"
+I,overlapSide,"numeric, double",percentage,the percent horizontal overlap of the drone survey
+J,overlapFront,"numeric, double",percentage,the percent forward overlap of the drone survey
+K,nFlights,integer,NA,the number of flights needed to complete each mission
+L,dateFlights_ymd,"string, date",yyyy-mm-dd,list of the dates (yyyy-mm-dd) on which flights were made for the mission
+M,dateAligned,date,yyyy-mm-dd,flightID that this flight was aligned to for the DSM
+N,ortho,"integer, binary",NA,binary indication if an orthomosaic was made (1) or not (0)
+O,notes,"string, character",NA,any pertinent notes about the flightID
