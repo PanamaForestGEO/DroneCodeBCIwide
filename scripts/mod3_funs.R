@@ -16,7 +16,13 @@
 ## identifyGapsMetrics = create gap polygons and calculate metrics
 ## defineGapsWrap = wrapper for the main workflow
 # --------------------------------------------------------------------#
-
+loadOrtho <- function(X, pathData, resN){
+  f <- list.files(pathData, full.names=TRUE,
+                         pattern=paste0(X, ".*Whole.*_crop.tif"))
+  return(rast(f[grepl(paste0("stand", resN*100), f)])) 
+  # return(rast(list.files(pathData, full.names=TRUE,
+  #                        pattern=paste0(X, ".*Subset.*masked.tif"))))
+}
 createCHM <- function(X, pathData, demBCI, crsProj, changeType){
   print(paste0("Creating chm for ", X))
   
@@ -35,6 +41,34 @@ createCHM <- function(X, pathData, demBCI, crsProj, changeType){
   
   return(chm)
 }
+indexFun <- function(i, r, g, b){
+  ## best results
+  if(i=="exg") index <- (2*g)-r-b
+  if(i=="exgr") index <- ((2*g)-r-b) - ((1.4*r)-g)
+  if(i=="tgi") index <- 0.5*((670-480)*(r-g)-(670-550)*(r-b))
+  
+  ## tried indices, good results, still some noise
+  if(i=="gcc") index <- g / (r+g+b)
+  if(i=="gli") index <- ((2*g)-r-b) / ((2*g)+r+b)
+  if(i=="rgri") index <- r/g
+  if(i=="ngbdi") index <- (g-b) / (g+b)
+  if(i=="mgrvi") index <- (g^2 - r^2) / (g^2 + r^2)
+  
+  ## tried indices, not great results
+  if(i=="vari") index <- (g-r) / (g+r-b)
+  if(i=="ngrdi") index <- (g-r) / (g+r)
+  
+  if(i=="cos"){
+    ## rgb for target color green
+    ### see `gapIndex.R` for how target was calculated
+    R <- 182
+    G <- 203
+    B <- 106
+    index <- (R*r+G*g+B*b)*((R*r+G*g+B*b)) / ((R*R+G*G+B*B)*(r*r+g*g+b*b))
+  }
+  
+  return(index)
+}
 timeChange <- function(X, flightTifs, changeType, saveChange, savePath, 
                        indexName=""){
   dateStart <- gsub("^.*_", "", names(flightTifs)[X-1])
@@ -42,6 +76,24 @@ timeChange <- function(X, flightTifs, changeType, saveChange, savePath,
   
   if(changeType=="structural"){
     change <- flightTifs[[X]] - flightTifs[[(X-1)]]
+  } else if(changeType=="spectral"){
+    print(paste0("Calculating spectral index ", indexName, " for ", dateStart, 
+                 " versus ", dateEnd, " at ", format(Sys.time())))
+
+    # tic()
+    focal <- lapply(1:2, function(w){
+      if(w==1) tif <- flightTifs[[(X-1)]] else tif <- flightTifs[[X]]
+
+      r <- tif[[1]]
+      g <- tif[[2]]
+      b <- tif[[3]]
+      tif <- indexFun(indexName, r, g, b)
+      return(tif)
+    })
+    # toc()
+    
+    # print*********************************************************
+    change <- focal[[2]] - focal[[1]]
   }
   
   if(saveChange){
@@ -62,6 +114,21 @@ processFlightDiff <- function(targetDates, changeType, pathData,
     ## ~10 sec per DSM 
     flightTifs <- lapply(targetDates, createCHM, pathData, demBCI, crsProj, 
                         changeType)
+  } else if(changeType=="spectral"){
+    flightTifs <- lapply(targetDates, loadOrtho, pathData, resN)
+
+    # 1. if applyBufferMask=TRUE, crop the full orthophotos in the same way as 
+    #   for the point cloud prior to calculating change (and then saved to 
+    #   the `path` directory). Note that this takes a long time, but (in 
+    #   addition to standardizing both processes) can save some time when 
+    #   identifying gaps later.
+    ##  If it's FALSE, it means they are already saved, and thus are just 
+    ##  loaded as in below.
+    # if(applyBufferMask){
+    #   files <- list.files(pathData, pattern="BCI.tif", full.names=TRUE)
+    #   flightTifs <- lapply(files, bufferMask, pathAge, bufferPath, crsProj,
+    #                        changeType)
+    # }
   }
   names(flightTifs) <- paste0("res", resN*100, "_", targetDates)
   
@@ -124,7 +191,7 @@ identifyGapsMetrics <- function(X, targetDates, saveChangePath, thresholds, gdal
                         "d", thresholds$shortThreshMax*-1)
 
   # Step 1: Mask the polygons by buildings and anomalous areas if present
-  print("Step 1/6 - Mask change raster based on lidar anomalies")
+  print("Step 1/6 - Mask change raster based on ortho/lidar anomalies")
   masks <- loadMasks(dateStart, dateEnd, maskPath, buildingPath)
   masksAll <- vect(masks)
   change <- mask(change, masksAll, inverse=TRUE)
@@ -133,9 +200,8 @@ identifyGapsMetrics <- function(X, targetDates, saveChangePath, thresholds, gdal
   ## than a `threshold` depth (height) change, then save
   print("Step 2/6 - Mask change raster based on gap magnitude threshold")
   rclMat <- matrix(c(-9999, thresholds$shortThreshMin, NA,
-                      thresholdMin = thresholds$shortThreshMin, 
-                          thresholdMax = thresholds$shortThreshMax, 1,
-                      thresholdMax = thresholds$shortThreshMax, 9999, NA), 
+                      thresholds$shortThreshMin, thresholds$shortThreshMax, 1,
+                      thresholds$shortThreshMax, 9999, NA), 
                   nrow=3, byrow=TRUE)
   changeTif <- classify(change, rclMat, right=TRUE, include.lowest=TRUE)
 
@@ -215,6 +281,7 @@ defineGapsWrap <- function(targetDates, changeType, pathData, demBCI, crsProj,
   # A. Process difference between flights
   ## for "chm" changeType, create canopy height models and calculate height 
   ## change btwn flights
+  ## for "ortho" changeType, calculate change btwn RGB index of flights
   ### Please see comments in the function for applyBufferMask argument
 
   if(runType %in% c("change", "all")){

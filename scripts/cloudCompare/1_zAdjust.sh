@@ -1,28 +1,39 @@
 #!/bin/bash
 
+##########################################################
+## Purpose: Apply z-adjustment to point cloud prior to alignment
+##          in CloudCompare software
+##
+## Creator: KC Cushman 2024
+## Edited: Ian McGregor
+## Contact: 
+## System: R Version 4.2.2, Jan 2024 (edited)
+##########################################################
+
+# to run this script, type the following into terminal
+# sh scripts/cloudCompare/zAdjust.sh
+
 # General variables
 totalN=844
 baseDir="$PWD"
-filePath=${baseDir}"droneData/pointClouds/"
+filePath="${baseDir}/droneData/pointClouds/"
 
-# Reference point cloud
-refDate="2023-06-19"
-refFilePrefix="/cloud_"
+# Path to transformation matrix
+matrixPath="${baseDir}/scripts/cloudCompare/zAdjust.txt"
 
 # Target point cloud
-targetDate="2023-10-12"
+targetDate="2023-11"
+targetPath="2_decimated/${targetDate}"
+targetOutPath="3_decimatedShifted/${targetDate}"
 targetFilePrefix="/cloud_"
-targetPath=${baseDir}"droneData/pointClouds/"
 
 ## Build the full file paths
-alignPath="${filePath}3_cloudCompare/"
-refPathCC="${alignPath}${refDate}${refFilePrefix}"
-targetPathCC="${filePath}2_standardized/${targetDate}${targetFilePrefix}"
-targetOutPathCC="${filePath}3_cloudCompare/${targetDate}"
+targetPathCC="${filePath}2_standardized/${targetPath}${targetFilePrefix}"
+targetOutPathCC="${filePath}2_standardized/${targetOutPath}"
 
-echo "Reference point cloud path = $refPathCC"
 echo "Target point cloud path = $targetPathCC"
 echo "Output path = $targetOutPathCC"
+echo "Matrix path = $matrixPath"
 
 # create output dir if it doesn't exist
 mkdir -p $targetOutPathCC
@@ -40,16 +51,13 @@ targetOutPathCC="${targetOutPathCC}${targetFilePrefix}"
 ## --args = everything after this is the CloudCompare-specific command line script
 
 for tileN in {1..844}; do
-# for tileN in {649,650}; do
-    echo "Aligning tile $tileN out of $totalN"
+# for tileN in {388}; do
+    echo "Shifting tile $tileN out of $totalN"
     
     path1="${targetPathCC}$tileN.laz"
     path3="${targetOutPathCC}$tileN.las"
 
-    path2="${refPathCC}$tileN.laz"
-    path4="${refPathCC}$tileN.las"
-
-    open -W -g -a CloudCompare.app --args -SILENT -O -GLOBAL_SHIFT -620000.00 -1010000.00 0 "$path1" -O -GLOBAL_SHIFT -620000.00 -1010000.00 0 "$path2" -ICP -OVERLAP 98 -RANDOM_SAMPLING_LIMIT 100000 -C_EXPORT_FMT LAS -SAVE_CLOUDS FILE "$path3 $path4" -CLEAR
+    open -W -g -a CloudCompare.app --args -SILENT -O -GLOBAL_SHIFT -620000.00 -1010000.00 0 "$path1" -APPLY_TRANS "$matrixPath" -C_EXPORT_FMT LAS -SAVE_CLOUDS FILE "$path3" -CLEAR
 
     ## either hold the code for 15 seconds or until "Return" is pressed,
     ## whichever is first. To troubleshoot and only advance when "Return"
