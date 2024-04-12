@@ -5,14 +5,14 @@ Below is the complete list of steps for processing drone data as part of a spect
 |---|---|---|---|
 **1** | **Prepare the data for analyses**
 1a | Process the data in Metashape: align the images, then build and export a point cloud. | see below | Metashape
-1b-i | Structural analysis: Standardize the point cloud to a common grid. | `L1_processPointClouds.R` | R
-1b-ii | Structural analysis: Align the standardized point cloud to previous ones. | `5_processPointCloud.md` | CloudCompare 
-1b-iii | Structural analysis: Use the aligned point cloud to create a DSM. | `L1_processPointClouds.R` | R
+1b-i | Structural analysis: Standardize the point cloud to a common grid. | `mod2a_processPointClouds.R` | R
+1b-ii | Structural analysis: Align the standardized point cloud to previous ones. | `mod2a_processPointCloud.md` | CloudCompare 
+1b-iii | Structural analysis: Use the aligned point cloud to create a DSM. | `mod2a_processPointClouds.R` | R
 | | | | |
 **2** | **Run the analyses**
-2a | Calculate a CHM from each DSM, then difference the two to see changes | `S5_defineGaps.R` | R
-2b | Identify gaps | `S5_defineGaps.R` | R
-2c | Calculate gap metrics and save 3 things: raster of polygons, shapefile of polygons, and metrics table. | `S5_defineGaps.R` | R
+2a | Calculate a CHM from each DSM, then difference the two to see changes | `mod3_defineGaps.R` | R
+2b | Identify gaps | `mod3_defineGaps.R` | R
+2c | Calculate gap metrics and save 2 things: shapefile of polygons and metrics table. | `mod3_defineGaps.R` | R
 
 ## Metashape workflow
 Using the application itself, the workflow is
