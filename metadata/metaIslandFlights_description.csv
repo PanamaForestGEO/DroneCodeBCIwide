@@ -13,4 +13,6 @@ K,nFlights,integer,NA,the number of flights needed to complete each mission
 L,dateFlights_ymd,"string, date",yyyy-mm-dd,list of the dates (yyyy-mm-dd) on which flights were made for the mission
 M,dateAligned,date,yyyy-mm-dd,flightID that this flight was aligned to for the DSM
 N,ortho,"integer, binary",NA,binary indication if an orthomosaic was made (1) or not (0)
-O,notes,"string, character",NA,any pertinent notes about the flightID
+O,labGroup,"string, character",NA,name of the lab group that conducted the drone flight
+P,labPI,"string, character",NA,name of the PI whose lab conducted the drone flight for contact purposes
+Q,notes,"string, character",NA,any pertinent notes about the flightID
