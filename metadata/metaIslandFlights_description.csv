@@ -3,16 +3,22 @@ A,flightID,date,yyyy-mm-dd,the date corresponding to the first flight date of th
 B,missionName,"string, character",NA,qualitative name of the mission
 C,drone,"string, character",NA,specific drone used for the mission
 D,dataType,"string, character",NA,"what kind of data was collected by the drone? E.g. RGB, lidar, multispectral (X-bands), hyperspectral"
-E,scale,"string, character",NA,"geographic scale of mission, e.g. full (island), partial, plot"
-F,gpsSource,"string, character",NA,"source of the GPS information, e.g. drone, RTK, PPK"
+E,scale,"string, character",NA,"geographic scale of mission, e.g. full (island), partial, plot, other"
+F,gpsSource,"string, character",NA,"source of the GPS information, whether ""drone"" itself or the gps hardware company, e.g. Emlid, Ibase, etc"
 G,sensor,"string, character",NA,name of sensor used. This should be the camera and/or specific lidar / hyperspectral sensor
 H,resolution_cm,"numeric, double",cm,"resolution of resultant orthophoto, cm"
 I,overlapSide,"numeric, double",percentage,the percent horizontal overlap of the drone survey
 J,overlapFront,"numeric, double",percentage,the percent forward overlap of the drone survey
 K,nFlights,integer,NA,the number of flights needed to complete each mission
 L,dateFlights_ymd,"string, date",yyyy-mm-dd,list of the dates (yyyy-mm-dd) on which flights were made for the mission
-M,dateAligned,date,yyyy-mm-dd,flightID that this flight was aligned to for the DSM
-N,ortho,"integer, binary",NA,binary indication if an orthomosaic was made (1) or not (0)
-O,labGroup,"string, character",NA,name of the lab group that conducted the drone flight
-P,labPI,"string, character",NA,name of the PI whose lab conducted the drone flight for contact purposes
-Q,notes,"string, character",NA,any pertinent notes about the flightID
+M,pointCloud,"integer, binary",NA,binary indication if a point cloud was generated (1) or not (0)
+N,dateAligned,date,yyyy-mm-dd,flightID that this flight's point cloud was aligned to prior to creating the DSM
+O,ortho,"integer, binary",NA,binary indication if an orthomosaic was made (1) or not (0)
+P,launchPoint,"string, character",NA,name of the lab group that conducted the drone flight
+Q,weather,"string, character",NA,brief notes about the weather during the flight day(s)
+R,postSoftware,"string, character",NA,what software and version was used for post-processing? E.g. Metashape v2.0.4
+S,issues,"string, character",NA,"any issues of note with the flight planning, execution, or post-processing"
+T,notes,"string, character",NA,other notes about this particular mission
+U,contributors,"string, character",NA,"who participated in this mission? Includes flight planning, execution, and post-processing"
+V,labPI,"string, character",NA,name of the PI whose lab conducted the drone flight for contact purposes
+W,contact,"string, character",NA,name and email (opt) for who should be contacted regarding questions about this mission
