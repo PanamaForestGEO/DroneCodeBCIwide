@@ -11,14 +11,15 @@ I,overlapSide,"numeric, double",percentage,the percent horizontal overlap of the
 J,overlapFront,"numeric, double",percentage,the percent forward overlap of the drone survey
 K,nFlights,integer,NA,the number of flights needed to complete each mission
 L,dateFlights_ymd,"string, date",yyyy-mm-dd,list of the dates (yyyy-mm-dd) on which flights were made for the mission
-M,pointCloud,"integer, binary",NA,binary indication if a point cloud was generated (1) or not (0)
-N,dateAligned,date,yyyy-mm-dd,flightID that this flight's point cloud was aligned to prior to creating the DSM
-O,ortho,"integer, binary",NA,binary indication if an orthomosaic was made (1) or not (0)
-P,launchPoint,"string, character",NA,name of the lab group that conducted the drone flight
-Q,weather,"string, character",NA,brief notes about the weather during the flight day(s)
-R,postSoftware,"string, character",NA,what software and version was used for post-processing? E.g. Metashape v2.0.4
-S,issues,"string, character",NA,"any issues of note with the flight planning, execution, or post-processing"
-T,notes,"string, character",NA,other notes about this particular mission
-U,contributors,"string, character",NA,"who participated in this mission? Includes flight planning, execution, and post-processing"
-V,labPI,"string, character",NA,name of the PI whose lab conducted the drone flight for contact purposes
-W,contact,"string, character",NA,name and email (opt) for who should be contacted regarding questions about this mission
+M,dateAligned_ymd,date,yyyy-mm-dd,flightID that this flight's point cloud was aligned to prior to creating the DSM
+N,pointCloud,"integer, binary",NA,binary indication if a point cloud was generated (1) or not (0)
+O,dsm,"integer, binary",NA,binary indication if a dsm was generated (1) or not (0)
+P,ortho,"integer, binary",NA,binary indication if an orthomosaic was made (1) or not (0)
+Q,launchPoint,"string, character",NA,name of the lab group that conducted the drone flight
+R,weather,"string, character",NA,brief notes about the weather during the flight day(s)
+S,postSoftware,"string, character",NA,what software and version was used for post-processing? E.g. Metashape v2.0.4
+T,issues,"string, character",NA,"any issues of note with the flight planning, execution, or post-processing"
+U,notes,"string, character",NA,other notes about this particular mission
+V,contributors,"string, character",NA,"who participated in this mission? Includes flight planning, execution, and post-processing"
+W,labPI,"string, character",NA,name of the PI whose lab conducted the drone flight for contact purposes
+X,contact,"string, character",NA,name and email (opt) for who should be contacted regarding questions about this mission
