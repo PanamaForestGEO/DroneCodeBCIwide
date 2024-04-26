@@ -7,7 +7,7 @@ flightID,missionName,drone,dataType,scale,gpsSource,sensor,resolution_cm,overlap
 6/29/21,BCI_whole_2021_06_29_EBEE_dipteryx,eBee senseFly,RGB,full,drone,S.O.D.A.,14.32,0.77,0.77,11,6/29/21,5/15/23,1,1,1,,,,,,,Helene Muller-Landau,
 9/6/21,,,,,,,14.32,,,,,,,1,1,,,,,,,,
 7/21/22,BCI_whole_2022_07_21_EBEE_dipteryx,eBee senseFly,RGB,full,drone,S.O.D.A.,14.19,0.77,0.77,14,7/21/22,5/15/23,1,1,1,,,Metashape v2.0.1,,,,Helene Muller-Landau,
-2/26/23,BCI_whole_2023_02_26_EBEE_jacaranda,eBee senseFly,RGB,full,drone,S.O.D.A.,,0.77,0.77,19,2/26/23,5/15/23,1,1,,,,,"as of 24 Apr 24, ortho file is corrupted",,,Helene Muller-Landau,
+2/26/23,BCI_whole_2023_02_26_EBEE_jacaranda,eBee senseFly,RGB,full,drone,S.O.D.A.,14.28,0.77,0.77,19,2/26/23,5/15/23,1,1,1,,,,,,,Helene Muller-Landau,
 3/16/23,BCI_whole_2023_03_18_EBEE_jacaranda ,eBee senseFly,RGB,full,drone,S.O.D.A.,14.18,0.77,0.77,26,"2023-03-16, 2023-03-17, 2023-03-18",5/15/23,1,1,1,,,Metashape v2.0.1,"There were 3 total flights, one each on 16, 17, and 18 March. There was a lot of overlap between the flights, with multiple images repeated. Vicente said that when he originally processed this flight, he manually chose which images to keep (i.e. just the first day). Ian followed a similar path to Vicente and manually used the following images. However, the output orthomosaic doesn't quite match the extent of the original ortho (especially the western edge).
 16 March: EB-03-06293_0109_0001 - EB-03-06293_0121_0073 consecutive
 18 March: EB-03-06293_0136_0069 - EB-03-06293_0136_0118 consecutive + EB-03-06293_0135_0082",,,Helene Muller-Landau,
@@ -20,4 +20,3 @@ flightID,missionName,drone,dataType,scale,gpsSource,sensor,resolution_cm,overlap
 3/6/24,DeadLab_2024-03-06,eBee senseFly,RGB,full,drone,S.O.D.A.,14.33,0.77,0.77,14,"2024-03-06, 2024-03-07",5/15/23,1,1,1,Orchid Island,,Metashape v2.0.3.16960,,"No issues with post-processing. The only images Metashape couldn't align were those over open water or during turns. Otherwise, aligned DSMs are fine and the orthomosaics look good, though of course the latter are not 100% aligned with the June 2023 ortho (but no super large shifts present).","Cesar Gutierrez, Fernando Arauz, Ian McGregor",Evan Gora,"Evan Gora, gorae@caryinstitute.org"
 3/25/24,DeadLab_2024-03-25,eBee senseFly,RGB,full,drone,S.O.D.A.,14.36,0.77,0.77,13,"2024-03-25, 2024-03-26",5/15/23,1,1,1,Orchid Island,,Metashape v2.0.3.16960,,"Similar to 2024-03-06, no issues with post-processing, DSMs and orthomosaics look good. Present shifts in ortho are not large.","Cesar Gutierrez, Fernando Arauz, Ian McGregor",Evan Gora,"Evan Gora, gorae@caryinstitute.org"
 4/29/24,DeadLab_2024-04-29,Trinity F70 Pro,RGB,,PPK,Sony RX1RII,,,,,,,,,,,,,,,,,
-,,,,,,,,,,,,,,,,,,,,,,,
