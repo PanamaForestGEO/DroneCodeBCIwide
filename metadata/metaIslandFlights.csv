@@ -1,5 +1,5 @@
 flightID,missionName,drone,dataType,scale,gpsSource,sensor,resolution_cm,overlapSide,overlapFront,nFlights,dateFlights_ymd,dateAligned_ymd,pointCloud,dsm,ortho,lauchPoint,weather,postSoftware,issues,notes,contributors,labPI,contact
-6/26/15,,Penguin V2 fixed wing,RGB,full,drone,Canon PowerShot ELPH 520 HS,18,0.38,0.77,,"2015-06-26, 2015-06-27, 2015-06-28",NA,0,1,0,,,,,unsure of exact side overlap,,,
+6/26/15,,Penguin V2 fixed wing,RGB,full,drone,Canon PowerShot ELPH 520 HS,18,0.38,0.77,,"2015-06-26, 2015-06-27, 2015-06-28",NA,0,1,1,,,,,unsure of exact side overlap,,,
 ,,,,,,,,,,,2017-??-??,,,,,,,,,,,,
 6/14/18,BCI_whole_2018_08_25_EBEE_dipteryx ,eBee senseFly,RGB,full,drone,S.O.D.A.,13.85,0.77,0.77,12,"2018-06-14, 2018-06-21, 2018-08-25",5/15/23,1,1,1,,,,,,,Helene Muller-Landau,
 6/19/19,BCI_whole_2019_06_27_EBEE_dipteryx ,eBee senseFly,RGB,full,drone,S.O.D.A.,14.39,0.77,0.77,18,"2019-06-19, 2019-06-22, 2019-06-24",5/15/23,1,1,1,,,,,,,Helene Muller-Landau,
