@@ -1,7 +1,7 @@
 # Directory structure
 This document contains metadata explaining the directory structure for the photogrammetry-based gap analysis protocol. The descriptions of the end-level folders are first, followed by a text tree of the structure at the bottom.
 
-Note that these are the base folders for the analysis. There may be additional ones at different sites but they are not directly necessary for the analysis.
+Note that these are the base folders. There may be additional ones at different sites but they are not directly necessary for the analysis.
 
 ## Folder descriptions
 `CloudComPy310` = This is the Python module that allows us to use CloudCompare without needing to open and close the application for each call, thus allowing us to parallelize.
