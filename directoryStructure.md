@@ -60,24 +60,30 @@ Here is a text representation of the directory structure that is repeatable acro
 |   │   │   └── shapefiles
 |   │   │   |    └── minCommonExtent
 |   │   ├── metadata
-|   │   │   └── orthoReportsBCI
 |   │   ├── pointClouds
 |   │   │   ├── 0_reference
 |   │   │   │   └── lidar_2023
 |   │   │   ├── 1_raw
-|   │   │   │   └── yyyy/mm/dd_1raw_<siteName>
+|   │   │   │   └── yyyy/mm/dd
+|   │   │   │   |  └── yyyy/mm/dd
 |   │   │   ├── 2_standardized
-|   │   │   │   └── yyyy/mm/dd_2stand_<siteName>
+|   │   │   │   └── yyyy/mm/dd
+|   │   │   │   |  └── cloud_N_<siteName>_2stand.las
 |   │   │   ├── 3_cloudCompare
-|   │   │   │   └── yyyy/mm/dd_3cloudComp_<siteName>
+|   │   │   │   └── yyyy/mm/dd
+|   │   │   │   |  └── cloud_N_<siteName>_3cloudComp.las
 |   │   │   ├── 4_aligned
-|   │   │   │   └── yyyy/mm/dd_4aligned_<siteName>
+|   │   │   │   └── yyyy/mm/dd
+|   │   │   │   |  └── cloud_N_<siteName>_4aligned.laz
 |   │   │   ├── 5_dsm
-|   │   │   │   └── yyyy/mm/dd_5dsm_<siteName>
+|   │   │   │   └── yyyy/mm/dd
+|   │   │   │   |  └── yyyy/mm/dd_<siteName>_5dsm.tif
 |   │   │   ├── 6_dsmMasked
-|   │   │   │   └── yyyy/mm/dd_6dsmMask_<siteName>
+|   │   │   │   └── yyyy/mm/dd
+|   │   │   │   |  └── yyyy/mm/dd_<siteName>_6dsmMask.tif
 |   │   │   └── 7_transformationMatrices
-|   │   │   │   └── yyyy/mm/dd_7transMat_<siteName>
+|   │   │   │   └── yyyy/mm/dd
+|   │   │   │   |  └── yyyy/mm/dd_<siteName>_7transMat.txt
 |   │   └── processedChange
 |   │   │   ├── changeSpectral
 |   │   │   ├── changeStructural
