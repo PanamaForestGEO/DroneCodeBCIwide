@@ -74,7 +74,7 @@ Here is a text representation of the directory structure that is repeatable acro
 |   │   │   │   |  └── cloud_N_<siteName>_3cloudComp.las
 |   │   │   ├── 4_aligned
 |   │   │   │   └── yyyy/mm/dd
-|   │   │   │   |  └── cloud_N_<siteName>_4aligned.laz
+|   │   │   │   |  └── cloud_N_<siteName>_4aligned.las
 |   │   │   ├── 5_dsm
 |   │   │   │   └── yyyy/mm/dd
 |   │   │   │   |  └── yyyy/mm/dd_<siteName>_5dsm.tif
