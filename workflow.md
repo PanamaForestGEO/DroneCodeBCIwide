@@ -4,11 +4,11 @@ Below is the complete list of steps for processing drone data as part of a spect
 |Step # | Task | Protocol or script name | Software 
 |---|---|---|---|
 **0** | **Prepare for analyses**
-0a | Create directory structure necessary for the processing code to run | `createDirStructure.R` | R
+0a | Create directory structure necessary for the processing code to run | `mod0_createDirStructure.R` | R
 0b | Manually set function arguments for the processing pipeline | `args.R` | R
 | | | | |
 **1** | **Initial data processing**
-1a | Process the data in Metashape: align the images, then build and export a point cloud. | see below | Metashape
+1a | Process the data in Metashape: align the images, then build and export a point cloud. | see below. This is `mod1`.| Metashape
 1b-i | Structural analysis: Standardize the point cloud to a common grid. | `mod2a_processPointClouds.R` | R
 1b-ii | Structural analysis: Align the standardized point cloud to previous ones. | `mod2a_processPointCloud.md` | CloudCompare 
 1b-iii | Structural analysis: Use the aligned point cloud to create a DSM. | `mod2a_processPointClouds.R` | R
