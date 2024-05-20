@@ -17,6 +17,9 @@ Below is the complete list of steps for processing drone data as part of a spect
 2a | Calculate a CHM from each DSM, then difference the two to see changes | `mod3_defineGaps.R` | R
 2b | Identify gaps | `mod3_defineGaps.R` | R
 2c | Calculate gap metrics and save 2 things: shapefile of polygons and metrics table. | `mod3_defineGaps.R` | R
+| | | | |
+**3** | **Clean up**
+3a | Convert `.las` files to the compressed `.laz` to save memory for archival purposes after processing is complete. | `mod0_createDirStructure.R` (may want to have this be a separate script later) | R
 
 ## Function arguments
 To facilitate an automatic workflow, the function arguments are set once in `args.R`.
