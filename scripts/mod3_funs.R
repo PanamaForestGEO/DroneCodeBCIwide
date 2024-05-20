@@ -16,18 +16,18 @@
 ## identifyGapsMetrics = create gap polygons and calculate metrics
 ## defineGapsWrap = wrapper for the main workflow
 # --------------------------------------------------------------------#
-loadOrtho <- function(X, pathData, resN){
-  f <- list.files(pathData, full.names=TRUE,
+loadOrtho <- function(X, pathInput, resN){
+  f <- list.files(pathInput, full.names=TRUE,
                          pattern=paste0(X, ".*Whole.*_crop.tif"))
   return(rast(f[grepl(paste0("stand", resN*100), f)])) 
-  # return(rast(list.files(pathData, full.names=TRUE,
+  # return(rast(list.files(pathInput, full.names=TRUE,
   #                        pattern=paste0(X, ".*Subset.*masked.tif"))))
 }
-createCHM <- function(X, pathData, demBCI, crsProj, changeType){
+createCHM <- function(X, pathInput, demBCI, crsProj, changeType){
   print(paste0("Creating chm for ", X))
   
   ## Bring in dsm
-  path <- list.files(pathData, full.names=TRUE)
+  path <- list.files(pathInput, full.names=TRUE)
   dsm <- rast(path[grepl(paste0(X, ".tif"), path)])
 
   ## bring in BCI dem and resample to match dsm
@@ -104,7 +104,7 @@ timeChange <- function(X, flightTifs, changeType, saveChange, savePath,
   
   return(change)
 }
-processFlightDiff <- function(targetDates, changeType, pathData,
+processFlightDiff <- function(targetDates, changeType, pathInput,
                               demBCI, crsProj, saveChange, 
                               saveChangePath, resN, indexName,
                               validated=FALSE, applyBufferMask=FALSE){
@@ -112,10 +112,10 @@ processFlightDiff <- function(targetDates, changeType, pathData,
   if(changeType=="structural"){
     # 1. Create canopy height models for each flight DSM
     ## ~10 sec per DSM 
-    flightTifs <- lapply(targetDates, createCHM, pathData, demBCI, crsProj, 
+    flightTifs <- lapply(targetDates, createCHM, pathInput, demBCI, crsProj, 
                         changeType)
   } else if(changeType=="spectral"){
-    flightTifs <- lapply(targetDates, loadOrtho, pathData, resN)
+    flightTifs <- lapply(targetDates, loadOrtho, pathInput, resN)
 
     # 1. if applyBufferMask=TRUE, crop the full orthophotos in the same way as 
     #   for the point cloud prior to calculating change (and then saved to 
@@ -125,7 +125,7 @@ processFlightDiff <- function(targetDates, changeType, pathData,
     ##  If it's FALSE, it means they are already saved, and thus are just 
     ##  loaded as in below.
     # if(applyBufferMask){
-    #   files <- list.files(pathData, pattern="BCI.tif", full.names=TRUE)
+    #   files <- list.files(pathInput, pattern="BCI.tif", full.names=TRUE)
     #   flightTifs <- lapply(files, bufferMask, pathAge, bufferPath, crsProj,
     #                        changeType)
     # }
@@ -273,7 +273,7 @@ identifyGapsMetrics <- function(X, targetDates, saveChangePath, thresholds, gdal
   print("Finished with gaps hoo-rah")
   return(list(gapPoly = v, gapMetrics = out))
 }
-defineGapsWrap <- function(targetDates, changeType, pathData, demBCI, crsProj, 
+defineGapsWrap <- function(targetDates, changeType, pathInput, demBCI, crsProj, 
                           saveChange=TRUE, savePath, resN, indexName, validated, 
                           saveChangePath, thresholds, gdalOutDir, maskPath, 
                           buildingPath, saveGapFiles, saveGapsPath, runType){
@@ -285,7 +285,7 @@ defineGapsWrap <- function(targetDates, changeType, pathData, demBCI, crsProj,
   ### Please see comments in the function for applyBufferMask argument
 
   if(runType %in% c("change", "all")){
-    changeRasters <- processFlightDiff(targetDates, changeType, pathData, demBCI, crsProj, 
+    changeRasters <- processFlightDiff(targetDates, changeType, pathInput, demBCI, crsProj, 
                                       saveChange=TRUE, savePath, resN, indexName,
                                       validated, applyBufferMask=FALSE)
     if(!validated){

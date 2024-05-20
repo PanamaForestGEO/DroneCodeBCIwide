@@ -1,121 +1,174 @@
 ##########################################################
-## Purpose: Define variables and parameters for gap identification scripts
+## Purpose: Define variables and parameters for gap analysis scripts
 ##
 ## Creator: KC Cushman, 2020
 ## Edited: Mia Mitchell, Ian McGregor
 ## Contact: Ian McGregor, mcgregori@caryinstitute.org
-## System: R Version 4.2.2, Sep 2023 (edited)
+## System: R Version 4.3.1
 ##########################################################
 
-# dates and resolutions of whole island flights
-flightInfo <- read.csv("droneData/metadata/metaIslandFlights.csv")
+# "siteName" is defined before sourcing this file
+
+# STOP! Have you run `createDirStructure.R` already??
+
+##----------------------------------------##
+# Top-level paths
+##----------------------------------------##
+pathData <- paste0("droneData/", siteName, "/")
+pathSpatial <- paste0("spatialData/", siteName, "/")
+if(!dir.exists(pathData)){
+  stop(paste0("Please run `createDirStructure.R`, otherwise this code will ",
+              "fail. If you did run the script and are still getting this ",
+              "error, please check your working directory path.")
+}
+
+##----------------------------------------##
+# General variables
+##----------------------------------------##
+siteName <- "bci"
+nCores <- 10 #cores available for parallelization
+
+# dates and resolutions of whole study site flights
+flightInfo <- read.csv(paste0(pathData, "metadata/metadataFlights.csv"))
 flightDates <- as.Date(flightInfo$flightID)
 
-crsProj <- "epsg: 32617"
-resN <- resMin <- 0.2
+targetDate <- "2024-03-06" #for what date should we process the point clouds?
+targetDates <- c("2024-03-06", "2024-03-25") #for what dates should we do the gap comparisons?
+targetDates <- sort(as.Date(targetDates)) #dates will be put in order (if >1)
 
+##----------------------------------------##
+# Site-specific paths
+##----------------------------------------##
+if(siteName=="bci"){
+  pathBuffer <- paste0(pathSpatial, "BCI_Outline_Minus25/BCI_Outline_Minus25.shp")
+  buildingPath <- paste0(pathSpatial, "Barro_Colorado_Island_Buildings/Buildings.shp")
+  pathSoils <- paste0(pathSpatial, "BCI_Soils/BCI_Soils.shp")
+  demBCI <- paste0(pathSpatial, "LidarDEM_BCI.tif")
+}
+
+##----------------------------------------##
+# Site-specific variables
+##----------------------------------------##
+if(siteName=="bci"){
+  crsProj <- "epsg: 32617"
+  resN <- resMin <- 0.2
+}
+
+##----------------------------------------##
+# Site-specific formatting
+##----------------------------------------##
+if(siteName=="bci"){
+  ## filter the age shapefile (only run if file doesn't exist)
+  ## NOTE this is irrelevant as of Jan 2024, potential to remove
+  pathAge <- paste0(pathSpatial, 
+                    "Ender_Forest_Age_1935/Ender_Forest_Age_1935.shp")
+  pathAgeFilt <- gsub(".shp", "_filtered.shp", pathAge)
+
+  # filterAge(pathAge, pathAgeFilt)
+
+  if(script=="alignPC"){
+    bciBorder <- aggregate(vect(pathSoils), by=NULL, dissolve=TRUE)
+    bciBorder <- fillHoles(bciBorder, inverse=FALSE)
+    bciBorder <- project(bciBorder, crsProj)
+    ROI <- st_as_sf(bciBorder)
+  }
+}
+
+##----------------------------------------##
+# Task-specific variables
+##----------------------------------------##
 if(script=="alignPC"){
-  nCores <- 9
-  # targetDate <- "2015-06"
-
   ## find Z-adjustment if necessary
   findZ <- FALSE
 
   ## run shell scripts for height adjustment and alignment in cloudCompare
-  shell_heightAdjust <- FALSE
-  shell_align <- TRUE
+  shell_heightAdjust <- FALSE #should we find a height adjustment using batch script?
+  shell_align <- TRUE #should we align our target cloud to a lidar cloud?
+  python <- TRUE #should we use pythonAPI? if FALSE, will use command-line script
 
   ## path definitions
-  pathPointCloud <- paste0("droneData/pointClouds/1_raw/", targetDate)
-  pathSoils <- "spatialData/bci/BCI_Soils/BCI_Soils.shp"
-  pathGrid <- "droneData/pointClouds/gridInfo.csv"
-  crsProj <- "epsg:32617"
+  pathPointCloud <- paste0(pathData, "pointClouds/1_raw/", targetDate, "/")
+  pathGrid <- paste0(pathData, "pointClouds/gridInfo.csv")
+  pathTile <- paste0("cloud_tileN_", siteName, "_type.las")
 
-  dirPath <- gsub("1_raw", "2_standardized", pathPointCloud)
+  outPathStand <- paste0(gsub("1_raw", "2_standardized", pathPointCloud), 
+                        gsub("type", "2stand", pathTile))
+  outPathAligned <- paste0(gsub("2_standardized", "4_aligned", outPathStand),
+                        gsub("type", "4aligned", pathTile))
 
-  outPathFull <- gsub(targetDate, paste0("1_fullResolution/", targetDate), dirPath)
-  outPathDec <- gsub(targetDate, paste0("2_decimated/", targetDate), dirPath)
-  outPathAligned <- gsub(targetDate, paste0("tilesAlignedBCI_", targetDate),
-                      gsub("2_standardized", "4_aligned/decimated", dirPath))
-  if(!dir.exists(outPathAligned)) dir.create(outPathAligned)
+  # outPathFull <- gsub(targetDate, paste0("1_fullResolution/", targetDate), dirPath)
+  # outPathDec <- gsub(targetDate, paste0("3_decimated/", targetDate), dirPath)
 
-  savePaths <- c(outPathFull, outPathDec, outPathAligned)
-  saveConditions <- c(TRUE, TRUE, TRUE)
-  sapply(savePaths, function(X) if(!dir.exists(X)) dir.create(X))
+  # savePaths <- c(outPathFull, outPathDec, outPathAligned)
+  savePaths <- c(outPathStand, outPathAligned)
+  saveConditions <- c(TRUE, TRUE)
 }
+
 if(script=="makeDSM"){
-  # targetDates <- flightDates
-  pointCloudPath <- "droneData/pointClouds/4_aligned/decimated/tilesAlignedBCI_DD"
+  pointCloudPath <- paste0(pathData, "pointClouds/4_aligned/DD")
   pathSave <- gsub("4_.*", "5_dsm/", pointCloudPath)
-  pathBuffer <- "spatialData/bci/BCI_Outline_Minus25/BCI_Outline_Minus25.shp"
+  targetDates <- targetDate
   plotDSM <- TRUE
   saveDSM <- TRUE
 }
+
 if(script=="metadata"){
   flightPath <- paste0("droneData/droneFlights/", flightMonth, "/", 
                        flightDate, "/mission", nMission, "/ulgDroneGPS")
 }
+
 if(script=="standardize"){
-  targetDates <- flightInfo$id[flightDates > as.Date("2020-01-01")]
-  path <- "droneData/droneOrthomosaics/"
+  path <- paste0(pathData, "droneOrthomosaics/")
   pathExt <- paste0(path, "shapefiles/minCommonExtent/")
   shpName <- "minCommonExtent.shp"
 
   pathInput <- paste0(path, "1_original")
   pathStandard <- paste0(path, "2_standardized/")
   pathMask <- "3_masked"
-  pathSpatial <- "spatialData/bci/"
-  pathBuffer <- paste0(pathSpatial, 
-                       "BCI_Outline_Minus25/BCI_Outline_Minus25.shp")
 
-  ## filter the age shapefile (only run if file doesn't exist)
-  ## NOTE this is irrelevant as of Jan 2024, potential to remove
-  pathAge <- paste0(pathSpatial, 
-                    "Ender_Forest_Age_1935/Ender_Forest_Age_1935.shp")
-  pathAgeFilt <- gsub(".shp", "_filtered.shp", pathAge)
-  
-  filterAge(pathAge, pathAgeFilt)
 }
-if(script=="changeGaps"){
-  # targetDates <- flightInfo$id[flightDates > as.Date("2020-01-01")]
-  targetDates <- c("2023-06-19", "2024-03-06")
-  savePath <- "droneData/processedChange/"
-  vecRemovePath <- "droneData/droneOrthomosaics/shapefiles/anomalyPolygons/"
-  saveGapsPath <- paste0(savePath, "gapsSl/fileType/gapsD1_D2.ext")
 
-  maskPath <- "droneData/anomalyPolygons/"
-  buildingPath <- "spatialData/bci/Barro_Colorado_Island_Buildings/Buildings.shp"
+if(script=="changeGaps"){
+  savePath <- paste0(pathData, "processedChange/")
+  vecRemovePath <- paste0(pathData, "droneOrthomosaics/shapefiles/maskPolygons/")
+  saveChangePath <- paste0(savePath, "changeSl/changeCT_D1_D2.tif")
+  saveGapsPath <- paste0(savePath, "gapsSl/fileType/gapsCT_D1_D2.ext")
+  maskPath <- paste0(pathData, "maskPolygons/")
   
   if(changeType=="structural"){
     resN <- 1
     indexName <- ""
-    pathHeight <- "droneData/pointClouds/"
-    pathData <- paste0(pathHeight, "6_dsmMasked")
+    pathHeight <- paste0(pathData, "pointClouds/")
+    pathInput <- paste0(pathHeight, "6_dsmMasked")
     maskPath <- paste0(maskPath, "structural")
-    demBCI <- "spatialData/bci/LidarDEM_BCI.tif"
-
+    saveChangePath <- gsub("Sl", "Structural", 
+                            gsub("CT", "Stru", saveChangePath))
     saveGapsPath <- gsub("Sl", "Structural", saveGapsPath)
     gdalOutDir <- gsub("fileType.*", "gdalOut", saveGapsPath)
-    if(!dir.exists(gdalOutDir)) dir.create(gdalOutDir)
 
     saveGapFiles <- TRUE
-    saveChangePath <- paste0(savePath, "changeStructural/changeD1_D2.tif")
+    
+    saveGapsPath <- gsub("CT", "Stru", saveGapsPath)
     applyBufferMask <- FALSE
     thresholds <- list(shortThreshMin = -9999, shortThreshMax = -5, 
                        gapSizeMin = 25, gapSizeMax = 10^6,
                        directions = 4)
   } else if(changeType=="spectral"){
-    pathOrtho <- "droneData/droneOrthomosaics/"
-    pathData <- paste0(pathOrtho, "3_masked")
+    pathOrtho <- paste0(pathData, "droneOrthomosaics/")
+    pathInput <- paste0(pathOrtho, "3_masked")
     maskPath <- paste0(maskPath, "spectral")
 
     saveGapsPath <- gsub("Sl", "Spectral", 
-                      gsub(".ext", paste0("_res", resN*100, ".ext"), saveGapsPath))
+                      gsub("CT", "Spec", 
+                            gsub(".ext", paste0("_res", resN*100, ".ext"), 
+                                  saveGapsPath)))
     gdalOutDir <- gsub("fileType.*", "gdalOut", saveGapsPath)
-    if(!dir.exists(gdalOutDir)) dir.create(gdalOutDir)
     
     saveGapFiles <- TRUE
-    saveChangePath <- paste0(savePath, "changeSpectral/changeD1_D2_res", resN*100, ".tif")
+    saveChangePath <- gsub("Sl", "Spectral",
+                          gsub("CT", "Spec",
+                              gsub(".tif", paste0("_res", resN*100, ".tif"),
+                                    saveChangePath)))
     
     # NOTE - change thresholds based on index
     indexName <- "exgr"
@@ -124,6 +177,7 @@ if(script=="changeGaps"){
                        directions = 4)
   }
 }
+
 if(script == "vis"){
   dataType <- c("rasters", "polygons", "metrics")
   

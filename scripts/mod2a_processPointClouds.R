@@ -9,10 +9,10 @@
 library(terra)
 library(lidR)
 library(parallel)
-library(sf) #is this needed still?
+library(sf) # for reTilePC function
 source("scripts/mod2a_funs.R")
 
-# NOTE: this workflow involves an interactive step in the internal `runCloudCompare`
+# NOTE: if this workflow involves an interactive step in the internal `runCloudCompare`
 #       function. The script will NOT finish without your input.
 # steps
 ## 1 = makeGrid
@@ -22,7 +22,9 @@ source("scripts/mod2a_funs.R")
 ## 5 = reTile with no overlap
 ## 6 = createDSM
 
-processPointClouds <- function(targetDate){
+siteName <- "bci"
+
+processPointClouds <- function(){
   script <- "alignPC"
   source("scripts/args.R", local=TRUE)
 
@@ -37,15 +39,15 @@ processPointClouds <- function(targetDate){
   ## 2. Re-tile the point cloud using the new grid with a certain overlap amount
   ##    and save the new laz files
   print("Retiling the point cloud to the grid with overlap.")
-  reTilePC(overlap=30, nCores, pathSoils, crsProj, dirPath, pathGrid, 
-            pathPointCloud, savePaths, saveConditions)
+  reTilePC(overlap=30, nCores, pathSoils, crsProj, pathGrid, 
+            pathPointCloud, savePaths, saveConditions, ROI)
   
   ##-------------------------------------------------------##
   ## 3. Find height adjustment needed before ICP alignment (code author = KC)
   if(findZ){
     # differences of 10s of m are fine but diffs of > several hundred m are not
     print("Checking what the height difference from the reference point cloud.")
-    checkZAdj(targetDate, outPathDec, targetPath)
+    checkZAdj(targetDate, outPathFull, targetPath)
 
     print("Finding the height adjustment matrix necessary for CloudCompare.")
     zAdjustWrap(targetDate, pathPointCloud)
@@ -57,17 +59,18 @@ processPointClouds <- function(targetDate){
   ##    See the protocol alignPointClouds.md in github for the differences
   ##    between Mac and Windows.
   print("Running CloudCompare for height adjustment and/or alignment.")
-  runCloudCompare(shell_heightAdjust, shell_align)
+  runCloudCompare(shell_heightAdjust, shell_align, python)
 
   ##-------------------------------------------------------##
   ## 4a. Re-tile the point cloud using the grid with no overlap amount
   ##    and save the new laz files
   print("Retiling the point cloud again, this time with no overlap.")
-  reTilePC(overlap=0, nCores, pathSoils, crsProj, dirPath, pathGrid, 
+  reTilePC(overlap=0, nCores, pathSoils, crsProj, pathGrid, 
             pathPointCloud, savePaths, saveConditions)
 
   ## 4b. Arrange outputs from CloudCompare
-  reformatOutputs(outPathDec, pathPointCloud)
+  ### only necessary when using cloudcompare software directly
+  # reformatOutputs(outPathDec, pathPointCloud)
 
   ##-------------------------------------------------------##
   ## 7. Create a DSM from the aligned point cloud
@@ -77,4 +80,4 @@ processPointClouds <- function(targetDate){
 
   print("Done!")
 }
-processPointClouds(targetDate="2024-03-25")
+processPointClouds()

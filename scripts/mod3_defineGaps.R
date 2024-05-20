@@ -16,6 +16,7 @@ library(data.table)
 script <- "changeGaps"
 
 # 0. Set and define functions and variables
+siteName <- "bci"
 changeType <- "structural" # "structural" or "ortho"
 validated <- TRUE # see below for description
 runType <- "all" # either "change" rasters only, "gaps" outputs only, or "all"
@@ -26,14 +27,14 @@ source("scripts/mod3_funs.R")
 # 0b. Define variables
 source("scripts/args.R", local=TRUE)
 
-processGaps <- function(changeType, runType, validated, saveChange){
+processGaps <- function(siteName, changeType, runType, validated, saveChange){
   ## ------------------------------------------------- ##
   # A. Run main processing functions
   ## if validated is FALSE, the function will stop to let you draw and save 
   ## anomaly polygons as in Part B below. Otherwise, if validated is TRUE then 
   ## the full function will run.
 
-  out <- defineGapsWrap(targetDates, changeType, pathData, demBCI, crsProj, 
+  out <- defineGapsWrap(targetDates, changeType, pathInput, demBCI, crsProj, 
                   saveChange, savePath, resN, indexName, validated, 
                   saveChangePath, thresholds, gdalOutDir, maskPath, 
                   buildingPath, saveGapFiles, saveGapsPath, runType)

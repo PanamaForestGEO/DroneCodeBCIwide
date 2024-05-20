@@ -59,18 +59,13 @@ writeStdGrid <- function(tileSize, pathSoils, crsProj, pathGrid){
   return(print(paste0("Done! Saved grid to ", pathGrid)))
 }
 standardizePC <- function(gridN, gridInfo, catObj, overlap, type,
-                          savePaths, saveConditions, ROI=NULL){
+                          savePaths, saveConditions, siteName, ROI=NULL){
   print(paste0("Processing tile ", gridN))
   data <- clip_rectangle(catObj, 
                          xleft = gridInfo$xmin[gridN] - overlap,
                          ybottom = gridInfo$ymin[gridN] - overlap,
                          xright = gridInfo$xmax[gridN] + overlap,
                          ytop = gridInfo$ymax[gridN] + overlap)
-  
-  ## save full resolution point cloud, no decimation (only for pre-cloudcompare)
-  if(type=="align" & saveConditions[1]){
-    writeLAS(data, file=paste0(savePaths[1], "/cloud_", gridN,".laz"))
-  }
 
   ## decimate the point cloud to only keep the highest points at a certain resolution
   ### smaller resolution in `highest()` = larger file size.
@@ -79,23 +74,33 @@ standardizePC <- function(gridN, gridInfo, catObj, overlap, type,
     data <- decimate_points(data, algorithm=highest(res=0.5))
   }
   
-  if(!is.null(ROI)){
-    data <- clip_roi(data,ROI)
-  }
+  # trim point cloud using ROI
+  if(!is.null(ROI)) data <- clip_roi(data, ROI)
 
+  ## TEMP 
+  ##      from before updating dir structure, probs can delete
   ## Pre-CloudCompare, save the standardized and decimated cloud tiles
   ## Post-CloudCompare, save the new point cloud with no overlap
-  if(length(data@data$X)>0 & type=="align" & saveConditions[2]){
-    writeLAS(data, file=paste0(savePaths[2], "/cloud_", gridN,".laz"))
-  } else if(length(data@data$X)>0 & saveConditions[3]){
-    writeLAS(data, file=paste0(savePaths[3], "/cloud_", gridN,".laz"))
+  # if(length(data@data$X)>0 & type=="align" & saveConditions[2]){
+  #   writeLAS(data, file=paste0(savePaths[2], "/cloud_", gridN,".las"))
+  # } else if(length(data@data$X)>0 & saveConditions[3]){
+  #   writeLAS(data, file=paste0(savePaths[3], "/cloud_", gridN,".las"))
+  # }
+
+  ## Save point cloud either preCloudCompare (type=="align") or post
+  if(type=="align" & length(data@data$X)>0 & saveConditions[1]){
+    writeLAS(data, file=gsub("tileN", gridN, savePaths[1]))
+  } else if(type=="" & length(data@data$X)>0 & saveConditions[2]){
+    writeLAS(data, file=gsub("tileN", gridN, savePaths[2]))
+  } else {
+    stop(paste0("Point cloud tile ", gridN, " is corrupted. Please fix."))
   }
   
   return(print(paste0("Finished tile ", gridN, " at ", 
                       format(Sys.time(), "%Y-%m-%d %H:%M:%S"))))
 }
-reTilePC <- function(overlap, nCores, pathSoils, crsProj, dirPath, pathGrid, 
-                    pathPointCloud, savePaths, saveConditions){
+reTilePC <- function(overlap, nCores, pathSoils, crsProj, pathGrid, 
+                    pathPointCloud, savePaths, saveConditions, ROI=NULL){
   print(paste0("Started retiling point cloud at ", format(Sys.time())))
   gridInfo <- read.csv(pathGrid)
   
@@ -104,19 +109,25 @@ reTilePC <- function(overlap, nCores, pathSoils, crsProj, dirPath, pathGrid,
   clusterEvalQ(cl, library(lidR))
 
   if(overlap != 0){
-      # trim point cloud using border of soils polygon
-    bciBorder <- aggregate(vect(pathSoils), by=NULL, dissolve=TRUE)
-    bciBorder <- fillHoles(bciBorder, inverse=FALSE)
-    bciBorder <- project(bciBorder, crsProj)
-    bciBorder <- st_as_sf(bciBorder)
+    catObj <- readLAScatalog(pathPointCloud)
+    if(is.na(st_crs(catObj))) st_crs(catObj) <- crsProj
 
-    catObj <- catalog(pathPointCloud)
-    clusterExport(cl, c("gridInfo", "catObj", "dirPath"), envir=environment())
+    w <- st_crs(as.numeric(gsub("epsg:", "", crsProj)))
+    if(st_crs(catObj) != w) stop("Point cloud CRS is not correct. Please change.")
+
+    clusterExport(cl, c("gridInfo", "catObj", "overlap", "savePaths",
+                      "saveConditions"), envir=environment())
     parSapply(cl, 1:nrow(gridInfo), standardizePC, gridInfo, catObj, overlap, 
-              type="align", savePaths, saveConditions, ROI=bciBorder)
+              type="align", savePaths, saveConditions, ROI)
+    # for(i in 1:nrow(gridInfo)){
+    #   print(i)
+    #   standardizePC(gridN=i, gridInfo, catObj, overlap, type="align", savePaths, 
+    #   saveConditions, ROI)
+    # }
   } else {
     catObj <- catalog(gsub("1_raw", "3_cloudCompare", pathPointCloud))
-    clusterExport(cl, c("gridInfo", "catObj"), envir=environment())
+    clusterExport(cl, c("gridInfo", "catObj", "savePaths", "saveConditions"), 
+                  envir=environment())
     parSapply(cl, 1:nrow(gridInfo), standardizePC, gridInfo, catObj, overlap=0, 
               type="", savePaths, saveConditions)
   }
@@ -152,14 +163,14 @@ makeZAdjust <- function(targetPath, refPath, matPath){
 
   return(print("Done and saved to text file"))
 }
-checkZAdj <- function(targetDate, outPathDec, targetPath){
+checkZAdj <- function(targetDate, outPathFull, targetPath){
   ## A height adjustment is needed if the height of the point cloud tiles are not
   ## close to the height of the reference cloud
   ### e.g. differences of 10s of m are fine but diffs of > several hundred m are not
 
   ## FIRST
   ## check if you need to do a height adjustment in the first place:
-  catNew <- catalog(outPathDec)
+  catNew <- catalog(outPathFull)
   catRef <- catalog(gsub(targetDate, "lidar_2023", targetPath))
 
   maxHeight <- data.frame(heightNew = catNew$Max.Z, heightRef = catRef$Max.Z)
@@ -189,7 +200,7 @@ zAdjustWrap <- function(targetDate, pathPointCloud){
   ## run the function (note that this takes a long time)
   makeZAdjust(targetPath, refPath, matPath)
 }
-runCloudCompare <- function(shell_heightAdjust, shell_align){
+runCloudCompare <- function(shell_heightAdjust, shell_align, python){
   ## you can manually edit the shell scripts via R by running 
   ## file.edit(scriptName), then type "i" and change the date in the file.
   ## then press "Esc", then ":wq".
@@ -211,21 +222,29 @@ runCloudCompare <- function(shell_heightAdjust, shell_align){
   }
   
   if(shell_align){
-    scriptName <- "scripts/cloudCompare/2_batchAlign.sh"
-
+    if(python){
+      scriptName <- "scripts/cloudCompare/2_runCloudComPy.sh"
+      cmd <- paste0("zsh ", scriptName, " bci ", targetDate)
+    } else {
+      scriptName <- "scripts/cloudCompare/2_batchAlign.sh"
     cmd <- paste0("sh ", scriptName)
+    }
+    
     print(paste0("Running the command `", cmd, "` in terminal at ",
                 format(Sys.time())))
     system(cmd)
-    print(paste0("Finished running the shell script at ", format(Sys.time())))
+    print(paste0("Finished registering via cloudCompare at ", format(Sys.time())))
+
   }
 }
 reformatOutputs <- function(outPathDec, pathPointCloud){
-  outPathDecShift <- gsub("2_decimated", "3_decimatedShifted", outPathDec)
+  outPathShift <- gsub("3_decimated", "2_fullShifted", outPathDec)
+
+  if(dir.exists(outPathShift)) n <- 2 else n <- 1
 
   ## Delete the .bin files in both the decimated and decimated shifted folders
-  for(i in 1:2){
-    binPath <- ifelse(i==1, outPathDec, outPathDecShift)
+  for(i in 1:n){
+    binPath <- ifelse(i==2, outPathDecShift, outPathDec)
     binFiles <- list.files(binPath, full.names = TRUE, pattern = ".bin")
     file.remove(binFiles)
   }
@@ -235,16 +254,19 @@ reformatOutputs <- function(outPathDec, pathPointCloud){
   matPath <- gsub("1_raw", "7_transformationMatrices", pathPointCloud)
   if(!dir.exists(matPath)) dir.create(matPath, recursive=TRUE)
 
-  matFiles <- list.files(outPathDecShift, full.names = TRUE, pattern = ".txt")
-  matFilesShort <- matFiles <- list.files(outPathDecShift, full.names = FALSE, pattern = ".txt")
-  for(i in 1:length(matFiles)){
-    nameNew <- gsub("MATRIX_.*", "MATRIX.txt", matFilesShort[i])
-    pathNew <- gsub(matFilesShort[i], nameNew, matFiles[1])
-    file.rename(from = matFiles[i], to = paste0(matPath, "/", nameNew))
+  matFiles <- list.files(outPathDec, full.names = TRUE, pattern = ".txt")
+  matFilesShort <- list.files(outPathDec, full.names = FALSE, pattern = ".txt")
+
+  if(length(matFiles) > 0){
+    for(i in 1:length(matFiles)){
+      nameNew <- gsub("MATRIX_.*", "MATRIX.txt", matFilesShort[i])
+      pathNew <- gsub(matFilesShort[i], nameNew, matFiles[1])
+      file.rename(from = matFiles[i], to = paste0(matPath, "/", nameNew))
+    }
   }
 }
-makeDSMs <- function(X, pointCloudPath, pathSave, crsProj, pathBuffer, plotDSM, 
-                    saveDSM, returnDSM){
+makeDSMs <- function(X, targetDates, pointCloudPath, pathSave, crsProj, 
+                    pathBuffer, plotDSM, saveDSM, returnDSM){
   
   print(paste0("Creating DSM for ", targetDates[X], " at ", format(Sys.time())))
   
@@ -252,6 +274,10 @@ makeDSMs <- function(X, pointCloudPath, pathSave, crsProj, pathBuffer, plotDSM,
   path <- gsub("DD", targetDates[X], pointCloudPath)
   
   catObj <- readLAScatalog(path)
+
+  ## if we need to increase processing speed, might be worth looking into
+  ## the following (see https://cran.r-project.org/web/packages/lidR/vignettes/lidR-computation-speed-LAScatalog.html)
+  # lidR:::catalog_laxindex()
   
   ## make the basic DSMs
   pathSave <- paste0(pathSave, "DSM_", targetDates[X], ".tif")
@@ -260,7 +286,9 @@ makeDSMs <- function(X, pointCloudPath, pathSave, crsProj, pathBuffer, plotDSM,
                                               na.fill = tin()))
 
   ## need to assign CRS
-  crs(outFile) <- crsProj
+  if(terra::crs(outFile) != terra::crs(crsProj)){
+    terra::crs(outFile) <- terra::crs(crsProj)
+  }
 
   ## resample to DEM to standardize
   dem <- rast("spatialData/bci/LidarDEM_BCI.tif")
@@ -288,12 +316,41 @@ makeDSMs <- function(X, pointCloudPath, pathSave, crsProj, pathBuffer, plotDSM,
 makeDSMwrap <- function(targetDate, returnDSM){
   # 1. Define variables and function arguments
   script <- "makeDSM"
-  targetDates <- targetDate
   source("scripts/args.R", local=TRUE)
 
+  # NOTE
+  ## you have the option to run multiple dates at once; just need to update
+  ## the args.R file for this script name. Default is just using the main
+  ## targetDate since that's the most common usage.
+
   # 2. Run the main function and save DSMs if wanted
-  outputList <- lapply(1:length(targetDates), makeDSMs, pointCloudPath, pathSave,
-                        crsProj, pathBuffer, plotDSM, saveDSM, returnDSM)
+  outputList <- lapply(1:length(targetDates), makeDSMs, targetDates, 
+                        pointCloudPath, pathSave, crsProj, pathBuffer, plotDSM, 
+                        saveDSM, returnDSM)
   
   if(returnDSM) return(outputList) else return(print("Done!"))
+}
+
+getTileLabs <- function(catObj){
+  w <- as.data.table(st_coordinates(catObj))
+
+  polyC <- lapply(unique(w$L2), function(q){
+    tab <- w[L2==q]
+    p <- as.polygons(ext(c(min(tab$X), max(tab$X), min(tab$Y), max(tab$Y))))
+    crs(p) <- "EPSG:32617"
+    p$ID <- q
+    return(p)
+  })
+
+  polys <- vect(polyC)
+  writeVector(polys, "droneData/pointClouds/grid.shp")
+
+  plot(dsmList[[1]][[1]])
+  lines(polys, labels=polys$ID)
+  text(polys, labels=polys$ID)
+}
+
+pathLidar <- "droneData/pointClouds/2_standardized/lidar_2023"
+clipLidar <- function(pathLidar, ROI){
+  ctl <- catalog(pathLidar)
 }
