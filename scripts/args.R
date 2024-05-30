@@ -11,6 +11,8 @@
 
 # STOP! Have you run `createDirStructure.R` already??
 
+siteName <- "bci"
+
 ##----------------------------------------##
 # Top-level paths
 ##----------------------------------------##
@@ -19,22 +21,30 @@ pathSpatial <- paste0("spatialData/", siteName, "/")
 if(!dir.exists(pathData)){
   stop(paste0("Please run `createDirStructure.R`, otherwise this code will ",
               "fail. If you did run the script and are still getting this ",
-              "error, please check your working directory path.")
+              "error, please check your working directory path."))
 }
 
 ##----------------------------------------##
 # General variables
 ##----------------------------------------##
-siteName <- "bci"
 nCores <- 10 #cores available for parallelization
 
 # dates and resolutions of whole study site flights
 flightInfo <- read.csv(paste0(pathData, "metadata/metadataFlights.csv"))
-flightDates <- as.Date(flightInfo$flightID)
+flightDates <- as.Date(flightInfo$flightID, format=c("%m/%d/%y"))
 
-targetDate <- "2024-03-06" #for what date should we process the point clouds?
-targetDates <- c("2024-03-06", "2024-03-25") #for what dates should we do the gap comparisons?
+targetDate <- "2023-10-31" #for what date should we process the point clouds?
+targetDates <- c("2022-07-21", "2023-03-16") #for what dates should we do the gap comparisons?
 targetDates <- sort(as.Date(targetDates)) #dates will be put in order (if >1)
+
+# td <- list.files(paste0(pathData, "pointClouds/6_dsmMasked/"))
+# targetDates <- gsub(".tif", "", gsub("DSM_", "", td[!grepl("orig", td)]))
+
+# Gap comparisons
+changeType <- "structural" # "structural" or "ortho"
+validated <- TRUE # see mod3 for description
+runType <- "all" # either "change" rasters only, "gaps" outputs only, or "all"
+saveChange <- TRUE
 
 ##----------------------------------------##
 # Site-specific paths
@@ -42,7 +52,7 @@ targetDates <- sort(as.Date(targetDates)) #dates will be put in order (if >1)
 if(siteName=="bci"){
   pathBuffer <- paste0(pathSpatial, "BCI_Outline_Minus25/BCI_Outline_Minus25.shp")
   buildingPath <- paste0(pathSpatial, "Barro_Colorado_Island_Buildings/Buildings.shp")
-  pathSoils <- paste0(pathSpatial, "BCI_Soils/BCI_Soils.shp")
+  pathBorder <- paste0(pathSpatial, "BCI_Outline/BCI_Outline.shp")
   demBCI <- paste0(pathSpatial, "LidarDEM_BCI.tif")
 }
 
@@ -67,9 +77,14 @@ if(siteName=="bci"){
   # filterAge(pathAge, pathAgeFilt)
 
   if(script=="alignPC"){
-    bciBorder <- aggregate(vect(pathSoils), by=NULL, dissolve=TRUE)
-    bciBorder <- fillHoles(bciBorder, inverse=FALSE)
-    bciBorder <- project(bciBorder, crsProj)
+    ## code to create the BCI border shapefile
+    # pathSoils <- paste0(pathSpatial, "BCI_Soils/BCI_Soils.shp")
+    # bciBorder <- aggregate(vect(pathSoils), by=NULL, dissolve=TRUE)
+    # bciBorder <- fillHoles(bciBorder, inverse=FALSE)
+    # bciBorder <- project(bciBorder, crsProj)
+    # writeVector(bciBorder, paste0(pathSpatial, "BCI_Outline/BCI_Outline.shp"))
+
+    bciBorder <- vect(pathBorder)
     ROI <- st_as_sf(bciBorder)
   }
 }
@@ -93,8 +108,21 @@ if(script=="alignPC"){
 
   outPathStand <- paste0(gsub("1_raw", "2_standardized", pathPointCloud), 
                         gsub("type", "2stand", pathTile))
-  outPathAligned <- paste0(gsub("2_standardized", "4_aligned", outPathStand),
+  outPathCC <- gsub("2_standardized", "3_cloudCompare", dirname(outPathStand))
+  outPathAligned <- paste0(gsub("2_standardized/.*", "4_aligned/", outPathStand),
+                        targetDate, "/",
                         gsub("type", "4aligned", pathTile))
+  outPathTrans <- gsub("2_standardized", "7_transformationMatrices", 
+                        dirname(outPathStand))
+  
+  pathVector <- c(outPathStand, outPathCC, outPathAligned, outPathTrans)
+  for(i in pathVector){
+    if(grepl("2_|4_", i)){
+      if(!dir.exists(dirname(i))) dir.create(dirname(i))
+    } else {
+      if(!dir.exists(i)) dir.create(i)
+    }
+  }
 
   # outPathFull <- gsub(targetDate, paste0("1_fullResolution/", targetDate), dirPath)
   # outPathDec <- gsub(targetDate, paste0("3_decimated/", targetDate), dirPath)

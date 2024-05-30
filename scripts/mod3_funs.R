@@ -9,6 +9,8 @@
 # --------------------------------------------------------------------#
 ## loadOrtho = load orthomosaics as tif files in list
 ## createCHM = create canopy height models from DSMs
+## loadDSM = load DSMs, mask to mask list, and extract mean height
+## calcMetrics = calculate quantitative metrics for CHMs
 ## indexFun = function for calculating a spectral index of the orthomosaics
 ## timeChange = difference the CHMs or index rasters from two flights
 ## processFlightDiff = calculate differences between two flights
@@ -40,6 +42,32 @@ createCHM <- function(X, pathInput, demBCI, crsProj, changeType){
   chm <- dsm - dem # (i.e. dsm - dem = chm)
   
   return(chm)
+}
+loadDSM <- function(dateN, targetDates, pathInput, v, masksAll){
+  ## Bring in dsm
+  path <- list.files(pathInput, full.names=TRUE)
+  dsm <- rast(path[grepl(paste0(targetDates[dateN], ".tif"), path)])
+  dsm <- mask(dsm, masksAll, inverse=TRUE)
+  dt <- as.data.table(extract(dsm, v))
+
+  out <- dt[, mean(Z), by=ID]
+
+  if(dateN==1) colH <- "meanPreDSM_m" else colH <- "meanPostDSM_m"
+  colnames(out) <- c("gapID", colH)
+  
+  return(out)
+}
+calcMetrics <- function(change, v, changeType){
+  dt <- as.data.table(extract(change, v))
+  colnames(dt) <- c("gapID", "gapChange")
+  meanChange <- dt[, .(quant05_m=quantile(gapChange, 0.05, na.rm=TRUE),
+                    quant25_m=quantile(gapChange, 0.25, na.rm=TRUE),
+                    quant75_m=quantile(gapChange, 0.75, na.rm=TRUE),
+                    quant95_m=quantile(gapChange, 0.95, na.rm=TRUE),
+                    median_m = median(gapChange, na.rm=TRUE),
+                    mean_m = mean(gapChange, na.rm=TRUE)), 
+                by=.(gapID)]
+  return(meanChange)
 }
 indexFun <- function(i, r, g, b){
   ## best results
@@ -219,10 +247,22 @@ identifyGapsMetrics <- function(X, targetDates, saveChangePath, thresholds, gdal
 
   outputFile <- gsub(".shp", paste0(threshInfo, ".shp"), outputFile)
 
-  cmd <- paste0("gdal_polygonize.py ", fileLab, " ", outputFile, " -overwrite")
+  ## NOTE - gdal_polygonize does NOT have an overwrite flag, despite the website
+  ##        saying it does. That means if you re-run the analysis at any point,
+  ##        gdal here will silently make an "out.shp" instead of the right file
+  ##        name. To fix this, remove the file first if it already exists.
+  if(file.exists(outputFile)){
+    fileName <- gsub(".shp", "", basename(outputFile))
+    wRem <- list.files(dirname(outputFile), full.names=TRUE) 
+    wRem <- wRem[grepl(fileName, wRem)]
+    for(redundant in wRem) file.remove(redundant)
+  }
+  
+  cmd <- paste0("gdal_polygonize.py ", fileLab, " ", outputFile)
   system(cmd)
 
-  # Step 3: Read in polygons, calculate area, and remove any that are below our min size threshold
+  # Step 3: Read in polygons, calculate area, and remove any that are below our 
+  ##        min size threshold. Then rewrite the shapefile.
   print("Step 4/6 - Remove gaps below size threshold")
   v <- vect(outputFile)
   v$area_m2 <- expanse(v, unit="m")
@@ -237,15 +277,13 @@ identifyGapsMetrics <- function(X, targetDates, saveChangePath, thresholds, gdal
   polyM$perim_m <- perim(v)
 
   ## quantiles of spectral / structural values
-  dt <- as.data.table(extract(change, v))
-  colnames(dt) <- c("gapID", "gapChange")
-  meanChange <- dt[, .(quant05_m=quantile(gapChange, 0.05, na.rm=TRUE),
-                      quant25_m=quantile(gapChange, 0.25, na.rm=TRUE),
-                      quant75_m=quantile(gapChange, 0.75, na.rm=TRUE),
-                      quant95_m=quantile(gapChange, 0.95, na.rm=TRUE),
-                      median_m = median(gapChange, 0.50, na.rm=TRUE),
-                      mean_m = mean(gapChange, na.rm=TRUE)), 
-                  by=.(gapID)]
+  meanChange <- calcMetrics(change, v)
+
+  if(changeType=="structural"){
+    dtHeight <- lapply(1:length(targetDates), loadDSM, targetDates, pathInput, 
+                        v, masksAll)
+    meanChange <- cbind(meanChange, dtHeight[[1]][,2], dtHeight[[2]][,2])
+  }
 
   ## construct full table
   out <- cbind(meanChange, polyM, 

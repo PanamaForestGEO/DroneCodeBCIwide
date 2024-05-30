@@ -9,25 +9,20 @@
 ## Creator: KC Cushman, 2020
 ## Edited: Mia Mitchell, Ian McGregor
 ## Contact: Ian McGregor, mcgregori@caryinstitute.org
-## System: R Version 4.2.2, Sep 2023 (edited)
+## System: R Version 4.2.2
 ##########################################################
 library(terra)
 library(data.table)
-script <- "changeGaps"
 
-# 0. Set and define functions and variables
-siteName <- "bci"
-changeType <- "structural" # "structural" or "ortho"
-validated <- TRUE # see below for description
-runType <- "all" # either "change" rasters only, "gaps" outputs only, or "all"
+processGaps <- function(){
+  script <- "changeGaps"
 
-# 0a. Define functions
-source("scripts/mod3_funs.R")
+  # 0a. Define functions
+  source("scripts/mod3_funs.R")
 
-# 0b. Define variables
-source("scripts/args.R", local=TRUE)
+  # 0b. Define variables
+  source("scripts/args.R", local=TRUE)
 
-processGaps <- function(siteName, changeType, runType, validated, saveChange){
   ## ------------------------------------------------- ##
   # A. Run main processing functions
   ## if validated is FALSE, the function will stop to let you draw and save 
@@ -60,4 +55,4 @@ processGaps <- function(siteName, changeType, runType, validated, saveChange){
 }
 
 # DSMs
-processGaps(changeType, runType, validated, saveChange=TRUE)
+processGaps()

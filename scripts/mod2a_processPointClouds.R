@@ -70,7 +70,9 @@ processPointClouds <- function(){
 
   ## 4b. Arrange outputs from CloudCompare
   ### only necessary when using cloudcompare software directly
-  # reformatOutputs(outPathDec, pathPointCloud)
+  if(shell_align & !python){
+    reformatOutputs(outPathDec, pathPointCloud)
+  }
 
   ##-------------------------------------------------------##
   ## 7. Create a DSM from the aligned point cloud

@@ -82,7 +82,7 @@ def alignCloud(cloudN, cloudPaths, shiftX, shiftY, shiftZ, totalN):
     res = cc.ICP(data = clouds[0], model = clouds[1], 
                 minRMSDecrease=1.e-5, maxIterationCount=0,          # defaults
                 removeFarthestPoints=False,                         # defaults
-                method=cc.CONVERGENCE_TYPE.MAX_ERROR_CONVERGENCE,   # defaults
+                method=cc.CONVERGENCE_TYPE.MAX_ERROR_CONVERGENCE,   # default when maxIter=0
                 adjustScale=False,                                  # defaults
                 finalOverlapRatio = 0.98,
                 randomSamplingLimit = 100000)

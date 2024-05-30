@@ -58,9 +58,18 @@ writeStdGrid <- function(tileSize, pathSoils, crsProj, pathGrid){
   write.csv(gridInfo, pathGrid)
   return(print(paste0("Done! Saved grid to ", pathGrid)))
 }
-standardizePC <- function(gridN, gridInfo, catObj, overlap, type,
-                          savePaths, saveConditions, siteName, ROI=NULL){
+standardizePC <- function(gridN, gridInfo, filePath, overlap, type, crsProj,
+                          savePaths, saveConditions, ROI=NULL){
   print(paste0("Processing tile ", gridN))
+  if(overlap==0){
+    f <- filePath[grepl(paste0("cloud_", gridN), filePath)]
+    catObj <- readLAS(f)
+  } else {
+    catObj <- catalog(filePath)
+  }
+
+  if(is.na(st_crs(catObj))) st_crs(catObj) <- crsProj
+
   data <- clip_rectangle(catObj, 
                          xleft = gridInfo$xmin[gridN] - overlap,
                          ybottom = gridInfo$ymin[gridN] - overlap,
@@ -69,13 +78,15 @@ standardizePC <- function(gridN, gridInfo, catObj, overlap, type,
 
   ## decimate the point cloud to only keep the highest points at a certain resolution
   ### smaller resolution in `highest()` = larger file size.
-  ### e.g. 0.5 = 1 GB cloud, 0.05 = 10 GB cloud
+  # trim point cloud using ROI
   if(type=="align"){
     data <- decimate_points(data, algorithm=highest(res=0.5))
   }
-  
-  # trim point cloud using ROI
-  if(!is.null(ROI)) data <- clip_roi(data, ROI)
+
+  if(!is.null(ROI)){
+    border <- st_crop(ROI, st_bbox(data))
+    data <- clip_roi(data, border)
+  }
 
   ## TEMP 
   ##      from before updating dir structure, probs can delete
@@ -92,6 +103,8 @@ standardizePC <- function(gridN, gridInfo, catObj, overlap, type,
     writeLAS(data, file=gsub("tileN", gridN, savePaths[1]))
   } else if(type=="" & length(data@data$X)>0 & saveConditions[2]){
     writeLAS(data, file=gsub("tileN", gridN, savePaths[2]))
+  } else if(length(data@data$X)==0){
+    print("Most likely edge of island, no points for this tile.")
   } else {
     stop(paste0("Point cloud tile ", gridN, " is corrupted. Please fix."))
   }
@@ -107,29 +120,28 @@ reTilePC <- function(overlap, nCores, pathSoils, crsProj, pathGrid,
   cl <- makeCluster(nCores)
   clusterEvalQ(cl, library(terra))
   clusterEvalQ(cl, library(lidR))
+  clusterEvalQ(cl, library(sf))
 
   if(overlap != 0){
-    catObj <- readLAScatalog(pathPointCloud)
-    if(is.na(st_crs(catObj))) st_crs(catObj) <- crsProj
-
-    w <- st_crs(as.numeric(gsub("epsg:", "", crsProj)))
-    if(st_crs(catObj) != w) stop("Point cloud CRS is not correct. Please change.")
-
-    clusterExport(cl, c("gridInfo", "catObj", "overlap", "savePaths",
-                      "saveConditions"), envir=environment())
-    parSapply(cl, 1:nrow(gridInfo), standardizePC, gridInfo, catObj, overlap, 
-              type="align", savePaths, saveConditions, ROI)
+    filePath <- pathPointCloud
+    parSapply(cl, 1:nrow(gridInfo), standardizePC, gridInfo, filePath, overlap, 
+              type="align", crsProj, savePaths, saveConditions, ROI)
     # for(i in 1:nrow(gridInfo)){
     #   print(i)
     #   standardizePC(gridN=i, gridInfo, catObj, overlap, type="align", savePaths, 
     #   saveConditions, ROI)
     # }
   } else {
-    catObj <- catalog(gsub("1_raw", "3_cloudCompare", pathPointCloud))
-    clusterExport(cl, c("gridInfo", "catObj", "savePaths", "saveConditions"), 
-                  envir=environment())
-    parSapply(cl, 1:nrow(gridInfo), standardizePC, gridInfo, catObj, overlap=0, 
-              type="", savePaths, saveConditions)
+    pathCC <- gsub("1_raw", "3_cloudCompare", pathPointCloud)
+    if(length(list.files(pathCC)) != length(list.files(dirname(savePaths[1])))){
+      stop(paste0("Number of files from CloudCompare don't match the number ",
+                  "of input files. Please re-run CloudCompare processing."))
+    }
+    filePath <- list.files(pathCC, full.names=TRUE)
+    # catObj <- catalog(pathCC)
+    parSapply(cl, 1:nrow(gridInfo), standardizePC, gridInfo, filePath, overlap, 
+              type="", crsProj, savePaths, saveConditions)
+    # standardizePC(740, gridInfo, f, overlap=0, type="", crsProj, savePaths, saveConditions)
   }
   
   stopCluster(cl)
@@ -278,6 +290,15 @@ makeDSMs <- function(X, targetDates, pointCloudPath, pathSave, crsProj,
   ## if we need to increase processing speed, might be worth looking into
   ## the following (see https://cran.r-project.org/web/packages/lidR/vignettes/lidR-computation-speed-LAScatalog.html)
   # lidR:::catalog_laxindex()
+
+  ## there are a couple tiles that are anomalous and cause the rasterize_canopy
+  ## function to fail. We can ignore these tiles using the code below, but
+  ## the trade-off is that no warning is thrown.
+  ## NB as of 29 May 2024, this has only been needed for a couple tiles from the
+  ## 2015-05-26 data.
+  if(targetDates %in% c("2015-05-26", "2023-10-12", "2023-10-31")){
+    opt_stop_early(catObj) <- FALSE
+  }
   
   ## make the basic DSMs
   pathSave <- paste0(pathSave, "DSM_", targetDates[X], ".tif")
@@ -343,7 +364,7 @@ getTileLabs <- function(catObj){
   })
 
   polys <- vect(polyC)
-  writeVector(polys, "droneData/pointClouds/grid.shp")
+  writeVector(polys, "droneData/bci/pointClouds/grid.shp")
 
   plot(dsmList[[1]][[1]])
   lines(polys, labels=polys$ID)
