@@ -15,12 +15,13 @@ M,dateAligned_ymd,date,yyyy-mm-dd,flightID that this flight's point cloud was al
 N,pointCloud,"integer, binary",NA,binary indication if a point cloud was generated (1) or not (0)
 O,dsm,"integer, binary",NA,binary indication if a dsm was generated (1) or not (0)
 P,ortho,"integer, binary",NA,binary indication if an orthomosaic was made (1) or not (0)
-Q,launchPoint,"string, character",NA,name of the lab group that conducted the drone flight
-R,flightDirection,"string, character",NA,"direction of the flight survey pattern, either NS (North-South), EW (East-West), DL (diagonal left), or DR (diagonal right)"
-S,weather,"string, character",NA,brief notes about the weather during the flight day(s)
-T,postSoftware,"string, character",NA,what software and version was used for post-processing? E.g. Metashape v2.0.4
-U,issues,"string, character",NA,"any issues of note with the flight planning, execution, or post-processing"
-V,notes,"string, character",NA,other notes about this particular mission
-W,contributors,"string, character",NA,"who participated in this mission? Includes flight planning, execution, and post-processing"
-X,labPI,"string, character",NA,name of the PI whose lab conducted the drone flight for contact purposes
-Y,contact,"string, character",NA,name and email (opt) for who should be contacted regarding questions about this mission
+Q,useAnalysis,"integer, binary",NA,"binary indication if the data (point cloud, dsm, ortho) are used in gap analyses (1) or not (0)"
+R,launchPoint,"string, character",NA,name of the lab group that conducted the drone flight
+S,flightDirection,"string, character",NA,"direction of the flight survey pattern, either NS (North-South), EW (East-West), DL (diagonal left), or DR (diagonal right)"
+T,weather,"string, character",NA,brief notes about the weather during the flight day(s)
+U,postSoftware,"string, character",NA,what software and version was used for post-processing? E.g. Metashape v2.0.4
+V,issues,"string, character",NA,"any issues of note with the flight planning, execution, or post-processing"
+W,notes,"string, character",NA,other notes about this particular mission
+X,contributors,"string, character",NA,"who participated in this mission? Includes flight planning, execution, and post-processing"
+Y,labPI,"string, character",NA,name of the PI whose lab conducted the drone flight for contact purposes
+Z,contact,"string, character",NA,name and email (opt) for who should be contacted regarding questions about this mission
