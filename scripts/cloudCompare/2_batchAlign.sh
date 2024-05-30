@@ -15,23 +15,27 @@
 # General variables
 totalN=844
 baseDir="$PWD"
-filePath=${baseDir}"/droneData/pointClouds/"
+filePath=${baseDir}"/droneData/bci/pointClouds/"
 flightDate="2024-03-25"
 
 # Reference point cloud
-refPath="lidar_2023"
+refPath="0_reference/lidar_2023"
 refFilePrefix="/cloud_"
 
 # Target point cloud
-targetPath="3_decimatedShifted/${flightDate}"
-targetFilePrefix="/cloud_"
+targetPath=${flightDate}
+targetFilePrefix="/cloud_N_bci_2stand.las"
 
 # Aligned point cloud
 alignPath="${filePath}3_cloudCompare/${flightDate}"
-alignFilePrefix="/cloud_"
+alignFilePrefix="/cloud_N_bci_3cloudCompare.las"
+
+# set word=table
+# set str="jump over the chair"
+# call set str=%%str:chair=%word%%%
 
 ## Build the full file paths
-refPathCC="${filePath}2_standardized/${refPath}${refFilePrefix}"
+refPathCC="${filePath}${refPath}${refFilePrefix}"
 targetPathCC="${filePath}2_standardized/${targetPath}${targetFilePrefix}"
 alignPathCC="${alignPath}${alignFilePrefix}"
 
@@ -52,16 +56,16 @@ mkdir -p $alignPath
 ## --args = everything after this is the CloudCompare-specific command line script
 
 for tileN in {1..844}; do
-# for tileN in {803..805}; do
+# for tileN in {362..365}; do
     echo "Aligning tile $tileN out of $totalN"
     
-    path1="${targetPathCC}$tileN.laz"
-    path3="${alignPathCC}$tileN.las"
+    call set path1=%%targetPathCC:N=%tileN%%% 
+    call set path3=%%alignPathCC:N=%tileN%%% 
 
     path2="${refPathCC}$tileN.laz"
     path4="${refPathCC}$tileN.las"
 
-    open -W -g -a CloudCompare.app --args -SILENT -O -GLOBAL_SHIFT -620000.00 -1010000.00 0 "$path1" -O -GLOBAL_SHIFT -620000.00 -1010000.00 0 "$path2" -ICP -OVERLAP 98 -RANDOM_SAMPLING_LIMIT 100000 -C_EXPORT_FMT LAS -SAVE_CLOUDS FILE "$path3 $path4" -CLEAR
+    open -W -g -a CloudCompare.app --args -SILENT -O -GLOBAL_SHIFT -620000.00 -1010000.00 0 "$path1" -O -GLOBAL_SHIFT -620000.00 -1010000.00 0 "$path2" -ICP -OVERLAP 98 -RANDOM_SAMPLING_LIMIT 100000 -C_EXPORT_FMT LAS -SAVE_CLOUDS FILE "$path3" -CLEAR
 
     ## either hold the code for 15 seconds or until "Return" is pressed,
     ## whichever is first. To troubleshoot and only advance when "Return"
