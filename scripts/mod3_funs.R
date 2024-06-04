@@ -247,18 +247,10 @@ identifyGapsMetrics <- function(X, targetDates, saveChangePath, thresholds, gdal
 
   outputFile <- gsub(".shp", paste0(threshInfo, ".shp"), outputFile)
 
-  ## NOTE - gdal_polygonize does NOT have an overwrite flag, despite the website
-  ##        saying it does. That means if you re-run the analysis at any point,
-  ##        gdal here will silently make an "out.shp" instead of the right file
-  ##        name. To fix this, remove the file first if it already exists.
-  if(file.exists(outputFile)){
-    fileName <- gsub(".shp", "", basename(outputFile))
-    wRem <- list.files(dirname(outputFile), full.names=TRUE) 
-    wRem <- wRem[grepl(fileName, wRem)]
-    for(redundant in wRem) file.remove(redundant)
-  }
-  
-  cmd <- paste0("gdal_polygonize.py ", fileLab, " ", outputFile)
+  ## NOTE - if you have an issue with gdal saying there's already a file
+  ##        and it won't overwrite, you need to make sure your version of gdal
+  ##        is >= 3.8.0 (Nov 2023)
+  cmd <- paste0("gdal_polygonize.py ", fileLab, " ", outputFile, " -overwrite")
   system(cmd)
 
   # Step 3: Read in polygons, calculate area, and remove any that are below our 
@@ -323,9 +315,9 @@ defineGapsWrap <- function(targetDates, changeType, pathInput, demBCI, crsProj,
   ### Please see comments in the function for applyBufferMask argument
 
   if(runType %in% c("change", "all")){
-    changeRasters <- processFlightDiff(targetDates, changeType, pathInput, demBCI, crsProj, 
-                                      saveChange=TRUE, savePath, resN, indexName,
-                                      validated, applyBufferMask=FALSE)
+    changeRasters <- processFlightDiff(targetDates, changeType, pathInput, demBCI, 
+                                      crsProj, saveChange=TRUE, savePath, resN, 
+                                      indexName, validated, applyBufferMask=FALSE)
     if(!validated){
       print("Inspect height change rasters and draw polygons as needed")
       return(changeRasters)
@@ -336,8 +328,8 @@ defineGapsWrap <- function(targetDates, changeType, pathInput, demBCI, crsProj,
   # C. Identify gaps, calculate metrics, and save outputs
   if(runType %in% c("gaps", "all")){
     gapOutputs <- sapply(2:length(targetDates), identifyGapsMetrics, targetDates, 
-                      saveChangePath, thresholds, gdalOutDir, maskPath, buildingPath, saveGapFiles, 
-                      saveGapsPath)
+                      saveChangePath, thresholds, gdalOutDir, maskPath, 
+                      buildingPath, saveGapFiles, saveGapsPath)
     return(gapOutputs)
   }
 }
